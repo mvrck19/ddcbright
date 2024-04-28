@@ -21,15 +21,17 @@ class BrightnessControl(QWidget):
         self.populate_monitors()
         self.monitor_selector.currentIndexChanged.connect(self.update_brightness_label)
 
-        self.brightness_label = QLabel()
-        self.update_brightness_label()
+
 
         self.brightness_slider = QSlider(Qt.Horizontal)
         self.brightness_slider.setMinimum(0)
         self.brightness_slider.setMaximum(100)
 
+        self.brightness_label = QLabel()
+        self.update_brightness_label()
+
         self.brightness_slider.setValue(self.get_brightness('0'))
-        self.brightness_slider.sliderReleased.connect(self.set_brightness)
+        self.brightness_slider.valueChanged.connect(self.set_brightness)
         
         layout.addWidget(self.monitor_selector)
         layout.addWidget(self.brightness_label)
@@ -78,6 +80,7 @@ class BrightnessControl(QWidget):
         i2c_bus = re.search(r'/dev/i2c-(\d+)', self.monitor_selector.currentText()).group(1)
         brightness = self.get_brightness(i2c_bus)
         self.brightness_label.setText(f'Current Brightness: {brightness}%')
+        self.brightness_slider.setValue(brightness)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
