@@ -21,8 +21,6 @@ class BrightnessControl(QWidget):
         self.populate_monitors()
         self.monitor_selector.currentIndexChanged.connect(self.update_brightness_label)
 
-
-
         self.brightness_slider = QSlider(Qt.Horizontal)
         self.brightness_slider.setMinimum(0)
         self.brightness_slider.setMaximum(100)
