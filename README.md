@@ -18,8 +18,8 @@ This is a simple GUI application for controlling the brightness of your monitor 
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/brightness-control.git
-    cd brightness-control
+    git clone https://github.com/mvrck19/ddcbright.git
+    cd ddcbright
     ```
 
 2. Install the dependencies:
