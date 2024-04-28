@@ -51,7 +51,7 @@ class BrightnessControl(QWidget):
 
     def get_brightness(self, i2c_bus):
         try:
-            result = subprocess.check_output(['ddcutil','--bus',f'{i2c_bus[-1]}' ,'getvcp', '10']).decode('utf-8')
+            result = subprocess.check_output(['ddcutil','--bus',f'{i2c_bus[-1]}' ,'getvcp', '10','--sleep-multiplier','.1']).decode('utf-8')
             match = re.search(r'current value =\s*(\d+)', result)
             if match:
                 brightness = int(match.group(1))
