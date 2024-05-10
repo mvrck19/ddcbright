@@ -14,7 +14,13 @@ This is a simple GUI application for controlling the brightness of your monitor 
 - PyQt5 for the GUI
 - `ddcutil` command line tool
 
-## Usage
+## Installation
+
+### Option 1: Download the .deb file
+
+You can download the .deb file from the [Releases](https://github.com/yourusername/ddcbright/releases) page of this repository.
+
+### Option 2: Build from source
 
 1. Clone the repository:
     ```bash
