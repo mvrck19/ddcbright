@@ -18,7 +18,7 @@ This is a simple GUI application for controlling the brightness of your monitor 
 
 ### Option 1: Download the .deb file
 
-You can download the .deb file from the [Releases](https://github.com/yourusername/ddcbright/releases) page of this repository.
+You can download the .deb file from the [Releases](https://github.com/mvrck19/ddcbright/releases) page of this repository.
 
 ### Option 2: Build from source
 
