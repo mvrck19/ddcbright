@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Define the source and destination paths
+src="/usr/bin/ddcbright/ddcbright.desktop"
+dest="/usr/share/applications/ddcbright.desktop"
+
+# Check if the source file exists
+if [ ! -f "$src" ]; then
+    echo "Error: $src does not exist."
+    exit 1
+fi
+
+# Check if the destination file already exists
+if [ -f "$dest" ]; then
+    echo "Warning: $dest already exists. Overwriting."
+fi
+
+# Try to move the file
+if ! mv "$src" "$dest"; then
+    echo "Error: Failed to move $src to $dest."
+    exit 1
+fi
+
+echo "Successfully moved $src to $dest."

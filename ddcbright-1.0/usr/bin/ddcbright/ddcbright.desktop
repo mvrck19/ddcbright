@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=DDCBright
+Comment=Brightness Control Application
+Exec=bash -c "python3 /usr/bin/ddcbright/tray.py"
+Icon=/usr/bin/ddcbright/sun.png
+Terminal=false
+Categories=Utility;
