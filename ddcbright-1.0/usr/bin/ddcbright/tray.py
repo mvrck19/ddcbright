@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction
 from PyQt5.QtGui import QIcon
 from app import BrightnessControl
@@ -9,7 +10,7 @@ app.setQuitOnLastWindowClosed(False)
 brightness_control = BrightnessControl()
 
 # Create the icon
-icon = QIcon("/home/mvrc/Dev/ddcbrit/sun.png")
+icon = QIcon("/usr/bin/ddcbright/sun.png")
 
 # Create the tray
 tray = QSystemTrayIcon()
