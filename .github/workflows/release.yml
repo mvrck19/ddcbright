@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build .deb
+        run: sh packaging/build-deb.sh
+
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08
+
+      - name: Build flatpak bundle
+        run: |
+          flatpak-builder --user --force-clean --repo=repo build-dir \
+            packaging/flatpak/io.github.mvrck19.ddcbright.yml
+          flatpak build-bundle repo ddcbright.flatpak io.github.mvrck19.ddcbright \
+            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" ddcbright.deb ddcbright.flatpak \
+            --title "${{ github.ref_name }}" --generate-notes

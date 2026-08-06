@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mvrck19.ddcbright</id>
+  <name>DDCBright</name>
+  <summary>Control monitor brightness over DDC/CI from the system tray</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <developer_name>Panagiotis Chaidos</developer_name>
+  <description>
+    <p>
+      A tray-resident utility that controls monitor brightness over DDC/CI.
+      Starts automatically at login and lives in the system tray until
+      clicked.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.mvrck19.ddcbright.desktop</launchable>
+  <url type="homepage">https://github.com/mvrck19/ddcbright</url>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.1" date="2026-08-07" />
+  </releases>
+</component>

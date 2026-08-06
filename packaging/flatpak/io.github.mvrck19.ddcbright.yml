@@ -1,0 +1,64 @@
+app-id: io.github.mvrck19.ddcbright
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: ddcbright
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  # DDC/CI on Linux talks to /dev/i2c-*; there's no narrower portal for this.
+  - --device=all
+  # Lets the app register itself for login autostart on the real host, not just the sandbox.
+  - --filesystem=xdg-config/autostart:create
+
+modules:
+  - name: python3-deps
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links=. --prefix=/app
+          pyudev-0.24.3-py3-none-any.whl
+          monitorcontrol-4.2.0-py3-none-any.whl
+          PyQt5_Qt5-5.15.2-py3-none-manylinux2014_x86_64.whl
+          pyqt5_sip-12.19.0-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.whl
+          PyQt5-5.15.11-cp38-abi3-manylinux_2_17_x86_64.whl
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/9d/3b/c37870f68ceb067707ca7b04db364a1478fcd40c6194007fb6e492ff9a92/pyudev-0.24.3-py3-none-any.whl
+        sha256: e8246f0a014fe370119ba2bc781bfbe62c0298d0d6b39c94e83102a8a3f56960
+      - type: file
+        url: https://files.pythonhosted.org/packages/8c/cb/fdf3bdbbfe947bf6746a3549d968d77979c670e113b3210d96c185b31051/monitorcontrol-4.2.0-py3-none-any.whl
+        sha256: 0e8fcfd21fede1b99f26f41d359b2cdecb43f62b3f803c8cb6ad3a896a77ff84
+      - type: file
+        url: https://files.pythonhosted.org/packages/83/d4/241a6a518d0bcf0a9fcdcbad5edfed18d43e884317eab8d5230a2b27e206/PyQt5_Qt5-5.15.2-py3-none-manylinux2014_x86_64.whl
+        sha256: 1988f364ec8caf87a6ee5d5a3a5210d57539988bf8e84714c7d60972692e2f4a
+      - type: file
+        url: https://files.pythonhosted.org/packages/37/10/14d06676c8d4a31a6e1b6270ff64c2900bfe000d59cd3302a4091f0d11ee/pyqt5_sip-12.19.0-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.whl
+        sha256: 40ed8341b7c6681d102708b65acbccf0c26908189bfa2e05e180a3b515296a87
+      - type: file
+        url: https://files.pythonhosted.org/packages/b4/8c/4065950f9d013c4b2e588fe33cf04e564c2322842d84dbcbce5ba1dc28b0/PyQt5-5.15.11-cp38-abi3-manylinux_2_17_x86_64.whl
+        sha256: cd672a6738d1ae33ef7d9efa8e6cb0a1525ecf53ec86da80a9e1b6ec38c8d0f1
+
+  - name: ddcbright
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/python3.11/site-packages/ddcbright
+      - install -m644 ddcbright-src/*.py ddcbright-src/sun.png /app/lib/python3.11/site-packages/ddcbright/
+      - install -Dm755 ddcbright-launcher /app/bin/ddcbright
+      - install -Dm644 io.github.mvrck19.ddcbright.desktop /app/share/applications/io.github.mvrck19.ddcbright.desktop
+      - install -Dm644 io.github.mvrck19.ddcbright.metainfo.xml /app/share/metainfo/io.github.mvrck19.ddcbright.metainfo.xml
+      - install -Dm644 ddcbright-src/sun.png /app/share/icons/hicolor/256x256/apps/io.github.mvrck19.ddcbright.png
+    sources:
+      - type: dir
+        path: ../../ddcbright
+        dest: ddcbright-src
+      - type: script
+        dest-filename: ddcbright-launcher
+        commands:
+          - '#!/bin/sh'
+          - 'exec python3 -m ddcbright "$@"'
+      - type: file
+        path: io.github.mvrck19.ddcbright.desktop
+      - type: file
+        path: io.github.mvrck19.ddcbright.metainfo.xml
