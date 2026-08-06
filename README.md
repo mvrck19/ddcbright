@@ -1,50 +1,52 @@
 # ddcbright - Brightness Control Application
 
-This is a simple GUI application for controlling the brightness of your monitor on Linux. It uses the `ddcutil` command to get and set the brightness over the I2C bus.
+A tray/menu-bar utility for controlling monitor brightness over DDC/CI. It sits in the
+system tray with a sun icon; click it to open the brightness slider. It registers itself
+to start automatically at login, so you don't need to launch it by hand each session.
 
-## Features
+## Platform support
 
-- Get the current brightness of the monitor
-- Set the brightness to a desired level
-- Display the current brightness level in a user-friendly GUI
-
-## Dependencies
-
-- Python 3
-- PyQt5 for the GUI
-- `ddcutil` command line tool
+- **Linux** and **Windows** — via [`monitorcontrol`](https://github.com/newAM/monitorcontrol),
+  which talks DDC/CI directly (no `ddcutil` install needed anymore).
+- **macOS** — not currently supported (the underlying `monitorcontrol` library has no macOS
+  backend).
 
 ## Installation
 
-### Option 1: Download the .deb file
+### Option 1: Download the `.deb` (Linux)
 
-You can download the .deb file from the [Releases](https://github.com/mvrck19/ddcbright/releases) page of this repository.
+Download from the [Releases](https://github.com/mvrck19/ddcbright/releases) page, then:
 
-### Option 2: Build from source
+```bash
+sudo dpkg -i ddcbright.deb
+pip install monitorcontrol  # not packaged for apt; one-time step
+```
 
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/mvrck19/ddcbright.git
-    cd ddcbright
-    ```
+### Option 2: Run from source (Linux or Windows)
 
-2. Install the dependencies:
-    ```bash
-    pip install PyQt5
-    sudo apt install ddcutil
-    ```
+```bash
+git clone https://github.com/mvrck19/ddcbright.git
+cd ddcbright
+pip install -r requirements.txt
+python -m ddcbright
+```
 
-3. Run the application:
-    ```bash
-    python app.py
-    ```
+The first run registers autostart-at-login automatically (Windows: a Registry `Run` entry;
+Linux: an `~/.config/autostart/ddcbright.desktop` entry). Quit any time from the tray menu.
 
 ## Troubleshooting
 
-If you encounter any issues with the application, please check the following:
+- Make sure your monitor supports DDC/CI and it's enabled in the monitor's OSD menu.
+- **Linux**: your user needs access to the I2C devices — add yourself to the `i2c` group
+  (`sudo usermod -aG i2c $USER`, then log out and back in).
+- **Windows**: no extra setup needed beyond the pip install; DDC/CI access uses the OS's
+  own display API.
 
-- Make sure your monitor supports DDC/CI and it is enabled. You can check this in your monitor's OSD menu.
-- Make sure your user has the necessary permissions to access the I2C devices. You might need to add your user to the `i2c` group.
+## Roadmap
+
+Not implemented yet, but planned:
+- Brightness schedules (e.g. dim automatically in the evening)
+- Ambient-light-based auto-brightness using the webcam
 
 ## Contributing
 

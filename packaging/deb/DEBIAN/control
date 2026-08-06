@@ -1,0 +1,11 @@
+Package: ddcbright
+Version: 1.1
+Section: base
+Priority: optional
+Architecture: all
+Depends: python3, python3-pyqt5
+Maintainer: Panagiotis Chaidos <phaidos@gmail.com>
+Description: Brightness Control Application
+ A system tray utility for controlling monitor brightness over DDC/CI.
+ Requires the "monitorcontrol" Python package (pip install monitorcontrol);
+ not packaged for apt, so run that once after installing.

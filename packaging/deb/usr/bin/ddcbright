@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH="/usr/share/ddcbright:$PYTHONPATH"
+exec python3 -m ddcbright "$@"

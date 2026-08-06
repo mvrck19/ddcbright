@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=DDCBright
+Comment=Brightness Control Application
+Exec=/usr/bin/ddcbright
+Icon=/usr/share/ddcbright/ddcbright/sun.png
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
