@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
+import sys
 from pathlib import Path
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction, QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 from . import autostart
 from .app import BrightnessControl
 
-ICON_PATH = Path(__file__).parent / "sun.png"
+ICON_PATH = Path(__file__).parent / ("sun.ico" if sys.platform == "win32" else "sun.png")
 
 
 def create_about_dialog():
@@ -26,6 +28,15 @@ def create_about_dialog():
 
 
 def main():
+    if sys.platform == "win32":
+        import ctypes
+        # Must run before QApplication/any window exists, or Windows keeps
+        # grouping/labeling the app under "Python" in the taskbar.
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("mvrck19.ddcbright")
+
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     autostart.register()
 
     app = QApplication([])
@@ -47,8 +58,30 @@ def main():
     menu.addAction(quit_action)
 
     def on_tray_icon_clicked(reason):
-        if reason == QSystemTrayIcon.Trigger:
-            brightness_control.show()
+        if reason != QSystemTrayIcon.Trigger:
+            return
+
+        icon_rect = tray.geometry()
+        size = brightness_control.sizeHint()
+        screen = QApplication.screenAt(icon_rect.center()) or QApplication.primaryScreen()
+        available = screen.availableGeometry()
+
+        if icon_rect.isValid() and not icon_rect.isEmpty():
+            x = icon_rect.right() - size.width()
+            y = icon_rect.top() - size.height()
+        else:
+            # ponytail: some Linux tray implementations don't report icon
+            # geometry -- fall back to the bottom-right corner, where a
+            # taskbar tray usually lives.
+            x = available.right() - size.width()
+            y = available.bottom() - size.height()
+
+        x = max(available.left(), min(x, available.right() - size.width()))
+        y = max(available.top(), min(y, available.bottom() - size.height()))
+
+        brightness_control.move(x, y)
+        brightness_control.show()
+        brightness_control.activateWindow()
 
     tray.activated.connect(on_tray_icon_clicked)
     tray.setContextMenu(menu)

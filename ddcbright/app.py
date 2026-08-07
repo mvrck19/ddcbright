@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from monitorcontrol import VCPError, get_monitors
 from PyQt5.QtCore import Qt
@@ -6,9 +7,42 @@ from PyQt5.QtWidgets import QComboBox, QLabel, QSlider, QVBoxLayout, QWidget
 
 logging.basicConfig(level=logging.INFO)
 
+LIGHT_STYLE = """
+#popup {
+    background-color: #f3f3f3;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+}
+QLabel { color: #1a1a1a; }
+"""
+
+DARK_STYLE = """
+#popup {
+    background-color: #2b2b2b;
+    border: 1px solid #3f3f3f;
+    border-radius: 8px;
+}
+QLabel { color: #f0f0f0; }
+"""
+
 
 def clamp_brightness(value: int) -> int:
     return max(0, min(100, int(value)))
+
+
+def is_dark_mode() -> bool:
+    if sys.platform != "win32":
+        return False
+    import winreg
+    try:
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+        ) as key:
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+        return value == 0
+    except OSError:
+        return False
 
 
 class BrightnessControl(QWidget):
@@ -19,7 +53,16 @@ class BrightnessControl(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('Brightness Control')
+        # ponytail: Qt.Popup gives click-away dismissal for free, matching
+        # how the OS's own volume/brightness flyouts behave.
+        self.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setObjectName("popup")
+        self.setStyleSheet(DARK_STYLE if is_dark_mode() else LIGHT_STYLE)
+
         layout = QVBoxLayout()
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(8)
 
         self.monitor_selector = QComboBox()
         self.populate_monitors()

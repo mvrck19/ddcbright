@@ -60,7 +60,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install -r requirements.txt pyinstaller
-      - run: pyinstaller --onefile --windowed --name ddcbright --add-data "ddcbright/sun.png;ddcbright" run.py
+      - run: pyinstaller --onefile --windowed --name ddcbright --icon ddcbright/sun.ico --add-data "ddcbright/sun.png;ddcbright" --add-data "ddcbright/sun.ico;ddcbright" run.py
       - uses: actions/upload-artifact@v4
         with:
           name: windows-exe
