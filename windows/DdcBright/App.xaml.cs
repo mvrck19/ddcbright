@@ -1,4 +1,5 @@
 using System.Windows;
+using Wpf.Ui.Appearance;
 
 namespace DdcBright;
 
@@ -14,7 +15,10 @@ public partial class App : System.Windows.Application
 
         Autostart.Register();
 
-        _flyout = new FlyoutWindow();
+        var settings = Settings.Load();
+        ApplyTheme(settings.Theme);
+
+        _flyout = new FlyoutWindow(settings);
 
         using var iconStream = System.Reflection.Assembly.GetExecutingAssembly()
             .GetManifestResourceStream("sun.ico")!;
@@ -46,6 +50,22 @@ public partial class App : System.Windows.Application
         if (e.Args.Contains("--show"))
         {
             _flyout.ShowNearCursor();
+        }
+    }
+
+    public static void ApplyTheme(ThemePreference preference)
+    {
+        switch (preference)
+        {
+            case ThemePreference.Light:
+                ApplicationThemeManager.Apply(ApplicationTheme.Light);
+                break;
+            case ThemePreference.Dark:
+                ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+                break;
+            default:
+                ApplicationThemeManager.ApplySystemTheme();
+                break;
         }
     }
 
