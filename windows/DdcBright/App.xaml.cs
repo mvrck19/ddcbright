@@ -7,6 +7,9 @@ public partial class App : System.Windows.Application
 {
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private FlyoutWindow? _flyout;
+    private SettingsWindow? _settingsWindow;
+    private Settings? _settings;
+    private BrightnessScheduler? _scheduler;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -15,10 +18,13 @@ public partial class App : System.Windows.Application
 
         Autostart.Register();
 
-        var settings = Settings.Load();
-        ApplyTheme(settings.Theme);
+        _settings = Settings.Load();
+        ApplyTheme(_settings.Theme);
 
-        _flyout = new FlyoutWindow(settings);
+        _scheduler = new BrightnessScheduler(_settings);
+        ApplyAutoBrightnessMode();
+
+        _flyout = new FlyoutWindow(_settings);
 
         using var iconStream = System.Reflection.Assembly.GetExecutingAssembly()
             .GetManifestResourceStream("sun.ico")!;
@@ -30,6 +36,7 @@ public partial class App : System.Windows.Application
         };
 
         var menu = new System.Windows.Forms.ContextMenuStrip();
+        menu.Items.Add("Settings…", null, (_, _) => ShowSettings());
         menu.Items.Add("About", null, (_, _) => ShowAbout());
         menu.Items.Add("Quit", null, (_, _) => Shutdown());
         _trayIcon.ContextMenuStrip = menu;
@@ -51,6 +58,19 @@ public partial class App : System.Windows.Application
         {
             _flyout.ShowNearCursor();
         }
+        if (e.Args.Contains("--settings"))
+        {
+            ShowSettings();
+        }
+    }
+
+    public void ShowSettings()
+    {
+        if (_settingsWindow is null || !_settingsWindow.IsLoaded)
+            _settingsWindow = new SettingsWindow(_settings!);
+
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
     }
 
     public static void ApplyTheme(ThemePreference preference)
@@ -69,6 +89,22 @@ public partial class App : System.Windows.Application
         }
     }
 
+    public void ApplyAutoBrightnessMode()
+    {
+        _scheduler?.Stop();
+        // _ambientSensor?.Stop(); -- Phase 3
+
+        switch (_settings!.AutoBrightnessMode)
+        {
+            case AutoBrightnessMode.Schedule:
+                _scheduler!.Start();
+                break;
+            case AutoBrightnessMode.Ambient:
+                // Phase 3
+                break;
+        }
+    }
+
     private static void ShowAbout()
     {
         System.Windows.MessageBox.Show(
@@ -82,6 +118,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _scheduler?.Stop();
         _trayIcon?.Dispose();
         base.OnExit(e);
     }

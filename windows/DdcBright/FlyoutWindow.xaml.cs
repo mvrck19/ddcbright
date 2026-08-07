@@ -29,7 +29,6 @@ public partial class FlyoutWindow : FluentWindow
         ThemeSelector.SelectedIndex = (int)_settings.Theme;
         AutoModeSelector.SelectedIndex = (int)_settings.AutoBrightnessMode;
         _suppressEvents = false;
-        UpdateAutoModeContent();
     }
 
     public void ShowNearCursor()
@@ -104,26 +103,9 @@ public partial class FlyoutWindow : FluentWindow
 
         _settings.AutoBrightnessMode = (AutoBrightnessMode)AutoModeSelector.SelectedIndex;
         _settings.Save();
-        UpdateAutoModeContent();
+        ((App)System.Windows.Application.Current).ApplyAutoBrightnessMode();
     }
 
-    private void UpdateAutoModeContent()
-    {
-        // Mode-specific controls (schedule times, ambient status) land here
-        // in later phases; for now just a placeholder per mode.
-        AutoModeContent.Content = _settings.AutoBrightnessMode switch
-        {
-            AutoBrightnessMode.Schedule => new System.Windows.Controls.TextBlock
-            {
-                Text = "Schedule options coming soon.",
-                Opacity = 0.7,
-            },
-            AutoBrightnessMode.Ambient => new System.Windows.Controls.TextBlock
-            {
-                Text = "Ambient (webcam) options coming soon.",
-                Opacity = 0.7,
-            },
-            _ => null,
-        };
-    }
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        => ((App)System.Windows.Application.Current).ShowSettings();
 }

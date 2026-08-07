@@ -3,6 +3,8 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="Brightness Control"
+                 MinWidth="0"
+                 MinHeight="0"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Acrylic"
                  WindowCornerPreference="Round"
@@ -11,47 +13,42 @@
                  ResizeMode="NoResize"
                  SizeToContent="WidthAndHeight"
                  Deactivated="Window_Deactivated">
-    <StackPanel Width="260" Margin="16,12">
+    <StackPanel Width="240" Margin="16,12">
         <ComboBox x:Name="MonitorSelector"
                   Margin="0,0,0,8"
                   HorizontalAlignment="Stretch"
                   SelectionChanged="MonitorSelector_SelectionChanged"/>
         <TextBlock x:Name="BrightnessLabel" Margin="0,0,0,8"/>
         <Slider x:Name="BrightnessSlider"
-                Margin="0,0,0,16"
+                Margin="0,0,0,12"
                 Minimum="0" Maximum="100"
                 ValueChanged="BrightnessSlider_ValueChanged"/>
 
-        <ui:CardExpander Margin="0,0,0,8">
-            <ui:CardExpander.Header>
-                <TextBlock Text="Auto Brightness" VerticalAlignment="Center"/>
-            </ui:CardExpander.Header>
-            <StackPanel Margin="0,8,0,0">
-                <ComboBox x:Name="AutoModeSelector"
-                          HorizontalAlignment="Stretch"
-                          SelectionChanged="AutoModeSelector_SelectionChanged">
-                    <ComboBoxItem Content="Off"/>
-                    <ComboBoxItem Content="Schedule"/>
-                    <ComboBoxItem Content="Ambient (webcam)"/>
-                </ComboBox>
-                <ContentControl x:Name="AutoModeContent" Margin="0,8,0,0"/>
-            </StackPanel>
-        </ui:CardExpander>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+            <TextBlock Text="Auto" Width="50" VerticalAlignment="Center"/>
+            <ComboBox x:Name="AutoModeSelector"
+                      Width="182"
+                      SelectionChanged="AutoModeSelector_SelectionChanged">
+                <ComboBoxItem Content="Off"/>
+                <ComboBoxItem Content="Schedule"/>
+                <ComboBoxItem Content="Ambient (webcam)"/>
+            </ComboBox>
+        </StackPanel>
 
-        <Grid Margin="0,4,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="Theme" VerticalAlignment="Center" Margin="0,0,8,0"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Theme" Width="50" VerticalAlignment="Center"/>
             <ComboBox x:Name="ThemeSelector"
-                      Grid.Column="1"
-                      HorizontalAlignment="Stretch"
+                      Width="182"
                       SelectionChanged="ThemeSelector_SelectionChanged">
                 <ComboBoxItem Content="System"/>
                 <ComboBoxItem Content="Light"/>
                 <ComboBoxItem Content="Dark"/>
             </ComboBox>
-        </Grid>
+        </StackPanel>
+
+        <Button Content="Settings…"
+                HorizontalAlignment="Right"
+                Padding="8,4"
+                Click="SettingsButton_Click"/>
     </StackPanel>
 </ui:FluentWindow>
