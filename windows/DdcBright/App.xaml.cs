@@ -37,6 +37,16 @@ public partial class App : System.Windows.Application
                 _flyout!.ShowNearCursor();
             }
         };
+
+        // Debug affordance: `ddcbright.exe --show` opens the flyout
+        // immediately instead of waiting for a tray click, so it can be
+        // screenshotted/tested without simulating a click on the tray icon
+        // (notoriously unreliable to automate -- it lives in the shell's
+        // process, not this one).
+        if (e.Args.Contains("--show"))
+        {
+            _flyout.ShowNearCursor();
+        }
     }
 
     private static void ShowAbout()

@@ -1,13 +1,10 @@
 using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media;
-using Color = System.Windows.Media.Color;
-using Size = System.Windows.Size;
-using Brushes = System.Windows.Media.Brushes;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Controls;
 
 namespace DdcBright;
 
-public partial class FlyoutWindow : Window
+public partial class FlyoutWindow : FluentWindow
 {
     private readonly List<MonitorHandle> _monitors;
     private bool _suppressEvents;
@@ -15,6 +12,7 @@ public partial class FlyoutWindow : Window
     public FlyoutWindow()
     {
         InitializeComponent();
+        ApplicationThemeManager.Apply(this);
 
         _monitors = MonitorControl.GetMonitors();
         foreach (var m in _monitors)
@@ -26,36 +24,22 @@ public partial class FlyoutWindow : Window
             BrightnessLabel.Text = "No monitors detected";
     }
 
-    protected override void OnSourceInitialized(EventArgs e)
-    {
-        base.OnSourceInitialized(e);
-
-        var hwnd = new WindowInteropHelper(this).Handle;
-        var dark = Theme.IsDarkMode();
-        var accent = Theme.GetAccentColor();
-        var tint = dark ? Color.FromArgb(200, 32, 32, 32) : Color.FromArgb(200, 243, 243, 243);
-        var translucent = Backdrop.Apply(hwnd, dark, tint);
-
-        RootBorder.Background = translucent
-            ? Brushes.Transparent
-            : new SolidColorBrush(dark ? Color.FromRgb(43, 43, 43) : Color.FromRgb(243, 243, 243));
-
-        BrightnessLabel.Foreground = new SolidColorBrush(dark ? Colors.White : Colors.Black);
-        BrightnessSlider.Foreground = new SolidColorBrush(accent);
-    }
-
     public void ShowNearCursor()
     {
-        // Measure/arrange before Show() so the window can be positioned
-        // correctly on first paint instead of flickering at (0,0) and
-        // jumping to its real spot.
-        Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        Arrange(new Rect(DesiredSize));
+        // FluentWindow's chrome/backdrop setup only finalizes once the HWND
+        // exists (on Show()), so a pre-Show Measure/Arrange under-reports
+        // the real size. Show hidden, measure the real ActualWidth/Height,
+        // reposition, then reveal -- avoids both an undersized-window bug
+        // and a flash-then-jump.
+        RefreshBrightness();
+        Opacity = 0;
+        Show();
+        UpdateLayout();
 
         var cursor = System.Windows.Forms.Cursor.Position;
         var workArea = System.Windows.Forms.Screen.FromPoint(cursor).WorkingArea;
-        var width = DesiredSize.Width;
-        var height = DesiredSize.Height;
+        var width = ActualWidth;
+        var height = ActualHeight;
 
         var x = cursor.X - width / 2;
         var y = workArea.Bottom - height - 8;
@@ -64,9 +48,7 @@ public partial class FlyoutWindow : Window
 
         Left = x;
         Top = y;
-
-        RefreshBrightness();
-        Show();
+        Opacity = 1;
         Activate();
     }
 
