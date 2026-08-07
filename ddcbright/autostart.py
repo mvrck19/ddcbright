@@ -10,7 +10,10 @@ def _register_windows():
     import winreg
 
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
-    command = f'"{sys.executable}" -m ddcbright'
+    if getattr(sys, "frozen", False):
+        command = f'"{sys.executable}"'
+    else:
+        command = f'"{sys.executable}" -m ddcbright'
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_ALL_ACCESS) as key:
         try:
             existing, _ = winreg.QueryValueEx(key, APP_NAME)
