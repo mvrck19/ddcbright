@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>ddcbright</AssemblyName>
+    <ApplicationIcon>sun.ico</ApplicationIcon>
+
+    <!-- Publish settings: native, single-file, no separate runtime install needed.
+         No PublishTrimmed: WPF isn't officially trim-safe (BAML/XAML loading
+         leans on reflection) and trimming risks runtime crashes for a small
+         size win. Compression gets most of the size benefit safely instead. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Plain .NET embedded resource (baked into the assembly manifest at
+         compile time) rather than a loose Content file or WPF pack
+         resource: both of those turned out not to survive single-file
+         publish reliably, this is the one mechanism that's guaranteed to. -->
+    <EmbeddedResource Include="sun.ico" LogicalName="sun.ico" />
+  </ItemGroup>
+
+</Project>

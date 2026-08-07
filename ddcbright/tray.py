@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import QAction, QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 from . import autostart
@@ -41,6 +41,11 @@ def main():
 
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
+
+    if sys.platform == "win32":
+        font = QFont()
+        font.setFamilies(["Segoe UI Variable Text", "Segoe UI"])
+        app.setFont(font)
 
     brightness_control = BrightnessControl()
 

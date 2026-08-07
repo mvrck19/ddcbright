@@ -7,23 +7,7 @@ from PyQt5.QtWidgets import QComboBox, QLabel, QSlider, QVBoxLayout, QWidget
 
 logging.basicConfig(level=logging.INFO)
 
-LIGHT_STYLE = """
-#popup {
-    background-color: #f3f3f3;
-    border: 1px solid #d0d0d0;
-    border-radius: 8px;
-}
-QLabel { color: #1a1a1a; }
-"""
-
-DARK_STYLE = """
-#popup {
-    background-color: #2b2b2b;
-    border: 1px solid #3f3f3f;
-    border-radius: 8px;
-}
-QLabel { color: #f0f0f0; }
-"""
+DEFAULT_ACCENT = "#0078d4"
 
 
 def clamp_brightness(value: int) -> int:
@@ -45,6 +29,89 @@ def is_dark_mode() -> bool:
         return False
 
 
+def get_accent_color() -> str:
+    if sys.platform != "win32":
+        return DEFAULT_ACCENT
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\DWM") as key:
+            value, _ = winreg.QueryValueEx(key, "AccentColor")
+        # AccentColor is a DWORD packed as 0xAABBGGRR.
+        r = value & 0xFF
+        g = (value >> 8) & 0xFF
+        b = (value >> 16) & 0xFF
+        return f"#{r:02x}{g:02x}{b:02x}"
+    except OSError:
+        return DEFAULT_ACCENT
+
+
+def _apply_windows_backdrop(hwnd: int, dark: bool) -> bool:
+    """Best-effort DWM Acrylic backdrop + native rounded corners (Windows 11
+    22H2+). Returns True if the translucent backdrop applied, so the caller
+    can skip painting a solid background over it. No-ops (returns False) on
+    older Windows where these DWM attributes don't exist."""
+    import ctypes
+
+    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+    DWMWA_WINDOW_CORNER_PREFERENCE = 33
+    DWMWA_SYSTEMBACKDROP_TYPE = 38
+    DWMWCP_ROUND = 2
+    DWMSBT_TRANSIENTWINDOW = 3  # backdrop meant for flyouts/context menus
+
+    dwmapi = ctypes.windll.dwmapi
+
+    def set_attr(attr, value) -> bool:
+        c_value = ctypes.c_int(value)
+        hresult = dwmapi.DwmSetWindowAttribute(
+            ctypes.c_void_p(hwnd), attr, ctypes.byref(c_value), ctypes.sizeof(c_value)
+        )
+        return hresult == 0
+
+    set_attr(DWMWA_USE_IMMERSIVE_DARK_MODE, 1 if dark else 0)
+    set_attr(DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
+    return set_attr(DWMWA_SYSTEMBACKDROP_TYPE, DWMSBT_TRANSIENTWINDOW)
+
+
+def build_stylesheet(dark: bool, accent: str, translucent: bool) -> str:
+    text_color = "#f0f0f0" if dark else "#1a1a1a"
+    control_bg = "rgba(255,255,255,0.08)" if dark else "rgba(0,0,0,0.05)"
+    border = "1px solid rgba(255,255,255,0.12)" if dark else "1px solid rgba(0,0,0,0.08)"
+    panel_bg = "transparent" if translucent else ("#2b2b2b" if dark else "#f3f3f3")
+
+    return f"""
+    #popup {{
+        background-color: {panel_bg};
+        border: {border};
+        border-radius: 8px;
+    }}
+    QLabel {{ color: {text_color}; background: transparent; }}
+    QComboBox {{
+        color: {text_color};
+        background-color: {control_bg};
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }}
+    QComboBox:hover {{ border: 1px solid {accent}; }}
+    QSlider::groove:horizontal {{
+        height: 4px;
+        background: {control_bg};
+        border-radius: 2px;
+    }}
+    QSlider::sub-page:horizontal {{
+        background: {accent};
+        border-radius: 2px;
+    }}
+    QSlider::handle:horizontal {{
+        background: {accent};
+        width: 16px;
+        height: 16px;
+        margin: -6px 0;
+        border-radius: 8px;
+    }}
+    """
+
+
 class BrightnessControl(QWidget):
     def __init__(self):
         super().__init__()
@@ -57,8 +124,16 @@ class BrightnessControl(QWidget):
         # how the OS's own volume/brightness flyouts behave.
         self.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        # Plain QWidget ignores stylesheet background/border-radius unless
+        # this is set -- without it the card styling silently doesn't paint.
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setObjectName("popup")
-        self.setStyleSheet(DARK_STYLE if is_dark_mode() else LIGHT_STYLE)
+
+        dark = is_dark_mode()
+        translucent = False
+        if sys.platform == "win32":
+            translucent = _apply_windows_backdrop(int(self.winId()), dark)
+        self.setStyleSheet(build_stylesheet(dark, get_accent_color(), translucent))
 
         layout = QVBoxLayout()
         layout.setContentsMargins(16, 12, 16, 12)

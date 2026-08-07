@@ -2,6 +2,11 @@
 *.flatpak
 /build-dir/
 /repo/
+/publish-out/
+
+# .NET
+windows/DdcBright/bin/
+windows/DdcBright/obj/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

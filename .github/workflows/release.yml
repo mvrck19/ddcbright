@@ -55,16 +55,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-dotnet@v4
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      - run: pip install -r requirements.txt pyinstaller
-      - run: pyinstaller --onefile --windowed --name ddcbright --icon ddcbright/sun.ico --add-data "ddcbright/sun.png;ddcbright" --add-data "ddcbright/sun.ico;ddcbright" run.py
+          dotnet-version: '8.0.x'
+      - run: dotnet publish windows/DdcBright/DdcBright.csproj -c Release -r win-x64 -o publish-out
       - uses: actions/upload-artifact@v4
         with:
           name: windows-exe
-          path: dist/ddcbright.exe
+          path: publish-out/ddcbright.exe
 
   publish:
     needs: [build-linux, build-windows]

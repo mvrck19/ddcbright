@@ -1,28 +1,43 @@
 # ddcbright - Brightness Control Application
 
 A tray/menu-bar utility for controlling monitor brightness over DDC/CI. It sits in the
-system tray with a sun icon; click it to open the brightness slider. It registers itself
+system tray with a sun icon; click it to open the brightness flyout. It registers itself
 to start automatically at login, so you don't need to launch it by hand each session.
 
 ## Platform support
 
-- **Linux** and **Windows** — via [`monitorcontrol`](https://github.com/newAM/monitorcontrol),
-  which talks DDC/CI directly (no `ddcutil` install needed anymore).
-- **macOS** — not currently supported (the underlying `monitorcontrol` library has no macOS
-  backend).
+Each platform gets its own native implementation rather than one shared compromise UI:
+
+- **Windows**: a native C#/WPF app (`windows/DdcBright/`) with a real Mica/Acrylic
+  flyout, matching your Windows light/dark theme and accent color.
+- **Linux**: a Python/PyQt5 app (`ddcbright/`) via
+  [`monitorcontrol`](https://github.com/newAM/monitorcontrol) for DDC/CI, packaged as
+  `.deb` or Flatpak.
+- **macOS**: not currently supported (`monitorcontrol` has no macOS backend).
 
 ## Installation
 
-### Option 1: Download the `.deb` (Linux)
+Grab the asset for your platform from the [Releases](https://github.com/mvrck19/ddcbright/releases)
+page:
 
-Download from the [Releases](https://github.com/mvrck19/ddcbright/releases) page, then:
+### Windows
+
+Download `ddcbright.exe` and run it — self-contained, nothing else to install.
+
+### Linux
 
 ```bash
 sudo dpkg -i ddcbright.deb
 pip install monitorcontrol  # not packaged for apt; one-time step
 ```
 
-### Option 2: Run from source (Linux or Windows)
+or install the Flatpak bundle:
+
+```bash
+flatpak install ddcbright.flatpak
+```
+
+### Run from source (Linux, or Windows without the native app)
 
 ```bash
 git clone https://github.com/mvrck19/ddcbright.git
@@ -39,8 +54,7 @@ Linux: an `~/.config/autostart/ddcbright.desktop` entry). Quit any time from the
 - Make sure your monitor supports DDC/CI and it's enabled in the monitor's OSD menu.
 - **Linux**: your user needs access to the I2C devices — add yourself to the `i2c` group
   (`sudo usermod -aG i2c $USER`, then log out and back in).
-- **Windows**: no extra setup needed beyond the pip install; DDC/CI access uses the OS's
-  own display API.
+- **Windows**: no extra setup needed; DDC/CI access uses the OS's own display API.
 
 ## Roadmap
 
