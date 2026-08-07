@@ -10,6 +10,7 @@ public partial class App : System.Windows.Application
     private SettingsWindow? _settingsWindow;
     private Settings? _settings;
     private BrightnessScheduler? _scheduler;
+    private AmbientLightSensor? _ambientSensor;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -22,6 +23,7 @@ public partial class App : System.Windows.Application
         ApplyTheme(_settings.Theme);
 
         _scheduler = new BrightnessScheduler(_settings);
+        _ambientSensor = new AmbientLightSensor(_settings);
         ApplyAutoBrightnessMode();
 
         _flyout = new FlyoutWindow(_settings);
@@ -62,6 +64,13 @@ public partial class App : System.Windows.Application
         {
             ShowSettings();
         }
+        if (e.Args.Contains("--ambient-test"))
+        {
+            // Test-only: force Ambient mode for this run without touching
+            // the persisted settings file.
+            _settings.AutoBrightnessMode = AutoBrightnessMode.Ambient;
+            ApplyAutoBrightnessMode();
+        }
     }
 
     public void ShowSettings()
@@ -92,7 +101,7 @@ public partial class App : System.Windows.Application
     public void ApplyAutoBrightnessMode()
     {
         _scheduler?.Stop();
-        // _ambientSensor?.Stop(); -- Phase 3
+        _ambientSensor?.Stop();
 
         switch (_settings!.AutoBrightnessMode)
         {
@@ -100,7 +109,7 @@ public partial class App : System.Windows.Application
                 _scheduler!.Start();
                 break;
             case AutoBrightnessMode.Ambient:
-                // Phase 3
+                _ambientSensor!.Start();
                 break;
         }
     }
@@ -119,6 +128,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _scheduler?.Stop();
+        _ambientSensor?.Stop();
         _trayIcon?.Dispose();
         base.OnExit(e);
     }
