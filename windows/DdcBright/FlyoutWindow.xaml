@@ -35,31 +35,37 @@
 
         <StackPanel x:Name="MonitorRowsPanel" />
 
-        <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,0,0,14" />
+        <!-- Hidden entirely when Off: an inactive-auto-brightness row has
+             nothing to glance at, just clutter, so this section only earns
+             its place in the flyout while Schedule/Ambient is actually
+             doing something. -->
+        <StackPanel x:Name="AutoBrightnessSection">
+            <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,0,0,14" />
 
-        <Grid Margin="0,0,0,4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="Auto-brightness" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-            <!-- Read-only status, not a control: Schedule/Ambient apply the moment
-                 they're selected (BrightnessScheduler/AmbientLightSensor start on
-                 TimeSpan.Zero), so a clickable mode switch here risked an accidental
-                 snap in a quick popup. Changing mode now lives only in Settings. -->
-            <TextBlock Grid.Column="1" x:Name="AutoModeBadgeText" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
-        </Grid>
-        <TextBlock x:Name="AutoStatusText"
-                   FontSize="12"
-                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                   TextWrapping="Wrap"
-                   Margin="0,0,0,16" />
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Auto-brightness" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <!-- Read-only status, not a control: Schedule/Ambient apply the moment
+                     they're selected (BrightnessScheduler/AmbientLightSensor start on
+                     TimeSpan.Zero), so a clickable mode switch here risked an accidental
+                     snap in a quick popup. Changing mode now lives only in Settings. -->
+                <TextBlock Grid.Column="1" x:Name="AutoModeBadgeText" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock x:Name="AutoStatusText"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,16" />
+        </StackPanel>
 
         <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,0,0,12" />
         <TextBlock x:Name="SettingsLink"
                    Text="Settings"
                    FontSize="13"
-                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                    HorizontalAlignment="Right"
                    Cursor="Hand"
                    MouseLeftButtonUp="SettingsLink_MouseLeftButtonUp" />

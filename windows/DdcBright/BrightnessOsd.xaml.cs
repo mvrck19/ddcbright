@@ -13,11 +13,13 @@ namespace DdcBright;
 public partial class BrightnessOsd : FluentWindow
 {
     private readonly DispatcherTimer _hideTimer;
+    private ApplicationTheme _lastAppliedTheme;
 
     public BrightnessOsd()
     {
         InitializeComponent();
         ApplicationThemeManager.Apply(this);
+        _lastAppliedTheme = ApplicationThemeManager.GetAppTheme();
 
         // Same show-hidden-then-measure workaround FlyoutWindow uses:
         // FluentWindow's chrome/backdrop only finalizes once the HWND
@@ -41,6 +43,17 @@ public partial class BrightnessOsd : FluentWindow
 
     public void ShowPercent(int percent)
     {
+        // Same "re-apply the backdrop, not just resources" fix as
+        // FlyoutWindow/SettingsWindow -- gated on change since this runs on
+        // every wheel notch and the underlying call is a real native one.
+        var currentTheme = ApplicationThemeManager.GetAppTheme();
+        if (currentTheme != _lastAppliedTheme)
+        {
+            ApplicationThemeManager.Apply(this);
+            WindowBackgroundManager.UpdateBackground(this, currentTheme, WindowBackdropType.Mica);
+            _lastAppliedTheme = currentTheme;
+        }
+
         PercentText.Text = $"{percent}%";
         UpdateLayout();
 

@@ -84,12 +84,15 @@ public partial class SettingsWindow : FluentWindow
         App.ApplyTheme(_settings.Theme);
 
         // ApplyTheme swaps the global resource dictionaries, so DynamicResource-
-        // bound content updates everywhere immediately -- but a window's native
-        // chrome (title bar, Acrylic/Mica tint) is only set up by
-        // ApplicationThemeManager.Apply(window) once, in its constructor, and
-        // doesn't refresh on its own. Without this, this window can end up with
-        // content re-themed but chrome stuck on the old theme.
+        // bound content updates everywhere immediately -- but re-calling
+        // ApplicationThemeManager.Apply(window) on an already-initialized
+        // window only re-swaps resources again, it doesn't re-trigger the
+        // native Mica material, which is what actually left this window
+        // with re-themed content sitting on a backdrop tinted for the old
+        // theme. WindowBackgroundManager.UpdateBackground is WPF-UI's own
+        // explicit "re-apply the backdrop effect" call for that case.
         ApplicationThemeManager.Apply(this);
+        WindowBackgroundManager.UpdateBackground(this, ApplicationThemeManager.GetAppTheme(), WindowBackdropType.Mica);
     }
 
     private void DayTimeDown_Click(object sender, RoutedEventArgs e) => AdjustDayTime(-15);

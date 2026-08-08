@@ -45,13 +45,18 @@ public partial class FlyoutWindow : FluentWindow
         // Re-applying theme here (not just once in the constructor) covers
         // the flyout being shown after the user changed theme from Settings
         // while the flyout was hidden -- its native chrome otherwise never
-        // finds out the theme changed. Only calling it when the theme
-        // actually changed since the last show, rather than unconditionally
-        // on every open, since ApplicationThemeManager.Apply(window) touches
-        // native chrome/backdrop setup that isn't free to redo.
+        // finds out the theme changed. ApplicationThemeManager.Apply(window)
+        // only re-swaps resource dictionaries on a second call; it doesn't
+        // re-trigger the native Mica material, which is what actually
+        // produced dark-on-dark unreadable text after switching to Light --
+        // WindowBackgroundManager.UpdateBackground is WPF-UI's own explicit
+        // "re-apply the backdrop effect" call for exactly that case. Only
+        // doing this when the theme actually changed since the last show,
+        // since it's a real native/DWM call, not free to redo every open.
         if (_settings.Theme != _lastAppliedTheme)
         {
             ApplicationThemeManager.Apply(this);
+            WindowBackgroundManager.UpdateBackground(this, ApplicationThemeManager.GetAppTheme(), WindowBackdropType.Mica);
             _lastAppliedTheme = _settings.Theme;
         }
         RebuildMonitorRows();
@@ -90,23 +95,20 @@ public partial class FlyoutWindow : FluentWindow
 
     private void RefreshAutoModeUi()
     {
+        // Hidden entirely when Off -- an inactive row has nothing worth
+        // glancing at, just clutter.
+        var isOff = _settings.AutoBrightnessMode == AutoBrightnessMode.Off;
+        AutoBrightnessSection.Visibility = isOff ? Visibility.Collapsed : Visibility.Visible;
+        if (isOff) return;
+
         AutoStatusText.Text = AutoModeStatus.GetText(_settings);
+        AutoModeBadgeText.Text = _settings.AutoBrightnessMode == AutoBrightnessMode.Schedule ? "Schedule" : "Ambient";
 
-        AutoModeBadgeText.Text = _settings.AutoBrightnessMode switch
-        {
-            AutoBrightnessMode.Schedule => "Schedule",
-            AutoBrightnessMode.Ambient => "Ambient",
-            _ => "Off",
-        };
-
-        // Plain colored text, no custom background -- reuses the same two
-        // brushes already relied on elsewhere in this window (secondary-gray
-        // body text, and the same accent brush the "Settings" link uses)
-        // rather than a one-off alpha-blended pill that isn't proven legible
-        // across both themes and every possible accent color.
-        AutoModeBadgeText.Foreground = _settings.AutoBrightnessMode == AutoBrightnessMode.Off
-            ? (Brush)FindResource("TextFillColorSecondaryBrush")
-            : (Brush)FindResource("SystemAccentColorPrimaryBrush");
+        // AccentTextFillColorPrimaryBrush, not SystemAccentColorPrimaryBrush:
+        // the latter is meant for fills (buttons, toggles), not calibrated
+        // for text-on-neutral-background contrast -- it read as barely
+        // readable for the "Settings" link before this fix.
+        AutoModeBadgeText.Foreground = (Brush)FindResource("AccentTextFillColorPrimaryBrush");
     }
 
     private void RebuildMonitorRows()
