@@ -12,6 +12,8 @@ namespace DdcBright;
 
 public partial class FlyoutWindow : FluentWindow
 {
+    private const int WheelStepPercent = 5;
+
     private List<MonitorHandle> _monitors = [];
     private readonly Settings _settings;
 
@@ -175,6 +177,15 @@ public partial class FlyoutWindow : FluentWindow
         var row = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
         row.Children.Add(header);
         row.Children.Add(sliderRow);
+
+        // Scroll to adjust while hovering anywhere over the row, not just
+        // the slider thumb itself.
+        row.PreviewMouseWheel += (_, e) =>
+        {
+            slider.Value = Math.Clamp(slider.Value + Math.Sign(e.Delta) * WheelStepPercent, slider.Minimum, slider.Maximum);
+            e.Handled = true;
+        };
+
         return row;
     }
 

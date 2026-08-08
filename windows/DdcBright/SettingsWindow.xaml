@@ -119,7 +119,7 @@
                                 <Button Grid.Column="2" x:Name="DayTimeUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="DayTimeUp_Click" />
                             </Grid>
                             <TextBlock Text="Brightness" FontSize="11.5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,4" />
-                            <Grid>
+                            <Grid x:Name="DayBrightnessRow" Background="Transparent" MouseWheel="DayBrightnessRow_MouseWheel">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
@@ -150,7 +150,7 @@
                                 <Button Grid.Column="2" x:Name="NightTimeUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="NightTimeUp_Click" />
                             </Grid>
                             <TextBlock Text="Brightness" FontSize="11.5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,4" />
-                            <Grid>
+                            <Grid x:Name="NightBrightnessRow" Background="Transparent" MouseWheel="NightBrightnessRow_MouseWheel">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />

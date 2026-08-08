@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -92,6 +93,18 @@ public partial class SettingsWindow : FluentWindow
     private void DayBrightnessUp_Click(object sender, RoutedEventArgs e) => AdjustDayBrightness(5);
     private void NightBrightnessDown_Click(object sender, RoutedEventArgs e) => AdjustNightBrightness(-5);
     private void NightBrightnessUp_Click(object sender, RoutedEventArgs e) => AdjustNightBrightness(5);
+
+    private void DayBrightnessRow_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        AdjustDayBrightness(Math.Sign(e.Delta) * 5);
+        e.Handled = true;
+    }
+
+    private void NightBrightnessRow_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        AdjustNightBrightness(Math.Sign(e.Delta) * 5);
+        e.Handled = true;
+    }
 
     private void TransitionMinutesDown_Click(object sender, RoutedEventArgs e) => AdjustTransitionMinutes(-15);
     private void TransitionMinutesUp_Click(object sender, RoutedEventArgs e) => AdjustTransitionMinutes(15);
