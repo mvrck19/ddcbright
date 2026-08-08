@@ -8,6 +8,7 @@ public partial class App : System.Windows.Application
 {
     private const int TrayScrollStepPercent = 5;
 
+    private Mutex? _singleInstanceMutex;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private TrayIconScrollHook? _trayScrollHook;
     private readonly Debouncer _trayScrollDebouncer = new(TimeSpan.FromMilliseconds(80));
@@ -46,6 +47,30 @@ public partial class App : System.Windows.Application
             TestFlyoutResize();
             return;
         }
+
+        // Used by the installer's uninstaller, run before the exe it points
+        // at gets deleted -- the app registers its own autostart entry on
+        // every launch, so it also owns cleaning it up.
+        if (e.Args.Contains("--unregister-autostart"))
+        {
+            Autostart.Unregister();
+            Shutdown();
+            return;
+        }
+
+        // Prevents duplicate tray icons if launched twice, and doubles as
+        // the AppMutex the installer checks before install/uninstall so it
+        // can prompt to close a running instance first. Only kept (and
+        // later released) when this instance actually owns it -- a mutex
+        // object that lost the race still gets a real handle back, and
+        // ReleaseMutex() on one you don't own throws.
+        var mutex = new Mutex(true, "DdcBright-SingleInstance", out var createdNew);
+        if (!createdNew)
+        {
+            Shutdown();
+            return;
+        }
+        _singleInstanceMutex = mutex;
 
         Autostart.Register();
 
@@ -290,6 +315,11 @@ public partial class App : System.Windows.Application
         _ambientSensor?.Stop();
         _trayScrollHook?.Dispose();
         _trayIcon?.Dispose();
+        if (_singleInstanceMutex is not null)
+        {
+            _singleInstanceMutex.ReleaseMutex();
+            _singleInstanceMutex.Dispose();
+        }
         base.OnExit(e);
     }
 }

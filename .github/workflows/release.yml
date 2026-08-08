@@ -59,10 +59,27 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet publish windows/DdcBright/DdcBright.csproj -c Release -r win-x64 -o publish-out
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DSourceExe="$pwd\publish-out\ddcbright.exe" /DMyAppVersion="$version" packaging\windows\ddcbright.iss
+
+      - name: Stage Windows release assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-windows | Out-Null
+          Copy-Item publish-out\ddcbright.exe dist-windows\ddcbright.exe
+          Copy-Item packaging\windows\ddcbright-setup.exe dist-windows\ddcbright-setup.exe
+
       - uses: actions/upload-artifact@v4
         with:
           name: windows-exe
-          path: publish-out/ddcbright.exe
+          path: dist-windows/*
 
   publish:
     needs: [build-linux, build-windows]
@@ -79,6 +96,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.ref_name }}" ddcbright.deb ddcbright.flatpak ddcbright.exe \
+          gh release create "${{ github.ref_name }}" ddcbright.deb ddcbright.flatpak ddcbright.exe ddcbright-setup.exe \
             --title "${{ github.ref_name }}" --generate-notes \
             --repo ${{ github.repository }}

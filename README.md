@@ -22,7 +22,11 @@ page:
 
 ### Windows
 
-Download `ddcbright.exe` and run it — self-contained, nothing else to install.
+- **Installer**: download `ddcbright-setup.exe` and run it — adds a Start Menu shortcut
+  and a proper entry in Add/Remove Programs. No admin rights needed (installs to your
+  user profile).
+- **Portable**: download `ddcbright.exe` and run it directly — self-contained, nothing
+  to install, nothing left behind but the autostart entry it registers on first run.
 
 ### Linux
 

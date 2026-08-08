@@ -31,4 +31,18 @@ public static class Autostart
         {
         }
     }
+
+    /// <summary>Best-effort; used by the installer's uninstaller to clean up
+    /// the Run key before removing the exe it points at.</summary>
+    public static void Unregister()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true);
+            key?.DeleteValue(AppName, throwOnMissingValue: false);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+        }
+    }
 }

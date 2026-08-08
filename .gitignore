@@ -3,6 +3,7 @@
 /build-dir/
 /repo/
 /publish-out/
+packaging/windows/*.exe
 
 # .NET
 windows/DdcBright/bin/
