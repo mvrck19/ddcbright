@@ -13,42 +13,49 @@
                  ResizeMode="NoResize"
                  SizeToContent="WidthAndHeight"
                  Deactivated="Window_Deactivated">
-    <StackPanel Width="240" Margin="16,12">
-        <ComboBox x:Name="MonitorSelector"
-                  Margin="0,0,0,8"
-                  HorizontalAlignment="Stretch"
-                  SelectionChanged="MonitorSelector_SelectionChanged"/>
-        <TextBlock x:Name="BrightnessLabel" Margin="0,0,0,8"/>
-        <Slider x:Name="BrightnessSlider"
-                Margin="0,0,0,12"
-                Minimum="0" Maximum="100"
-                ValueChanged="BrightnessSlider_ValueChanged"/>
+    <StackPanel Width="340" Margin="16">
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBlock Text="Auto" Width="50" VerticalAlignment="Center"/>
-            <ComboBox x:Name="AutoModeSelector"
-                      Width="182"
-                      SelectionChanged="AutoModeSelector_SelectionChanged">
-                <ComboBoxItem Content="Off"/>
-                <ComboBoxItem Content="Schedule"/>
-                <ComboBoxItem Content="Ambient (webcam)"/>
-            </ComboBox>
-        </StackPanel>
+        <Grid x:Name="LinkMonitorsRow" Margin="0,0,0,12" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                       Text="Link monitors"
+                       FontSize="11.5"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       Margin="0,0,6,0" />
+            <ToggleButton x:Name="LinkMonitorsToggle"
+                          Grid.Column="1"
+                          Style="{StaticResource PillToggleStyle}"
+                          Click="LinkMonitorsToggle_Click" />
+        </Grid>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="Theme" Width="50" VerticalAlignment="Center"/>
-            <ComboBox x:Name="ThemeSelector"
-                      Width="182"
-                      SelectionChanged="ThemeSelector_SelectionChanged">
-                <ComboBoxItem Content="System"/>
-                <ComboBoxItem Content="Light"/>
-                <ComboBoxItem Content="Dark"/>
-            </ComboBox>
-        </StackPanel>
+        <StackPanel x:Name="MonitorRowsPanel" />
 
-        <Button Content="Settings…"
-                HorizontalAlignment="Right"
-                Padding="8,4"
-                Click="SettingsButton_Click"/>
+        <TextBlock Text="Auto-brightness" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="2" Margin="0,0,0,8">
+            <UniformGrid Rows="1" Columns="3">
+                <ToggleButton x:Name="AutoOffBtn" Content="Off" Style="{StaticResource SegmentToggleStyle}" />
+                <ToggleButton x:Name="AutoScheduleBtn" Content="Schedule" Style="{StaticResource SegmentToggleStyle}" />
+                <ToggleButton x:Name="AutoAmbientBtn" Content="Ambient" Style="{StaticResource SegmentToggleStyle}" />
+            </UniformGrid>
+        </Border>
+        <TextBlock x:Name="AutoStatusText"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,16" />
+
+        <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,0,0,12" />
+        <TextBlock x:Name="SettingsLink"
+                   Text="Settings"
+                   FontSize="13"
+                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                   HorizontalAlignment="Right"
+                   Cursor="Hand"
+                   MouseLeftButtonUp="SettingsLink_MouseLeftButtonUp" />
     </StackPanel>
 </ui:FluentWindow>

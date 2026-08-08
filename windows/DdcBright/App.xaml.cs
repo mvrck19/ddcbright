@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Wpf.Ui.Appearance;
 
@@ -16,6 +17,17 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // `ddcbright.exe --render-preview <dir>` renders the flyout/settings
+        // windows to PNG without showing them, for eyeballing XAML changes
+        // in a script or a locked/headless session -- skips tray icon,
+        // autostart, and scheduler setup entirely.
+        if (GetArgValue(e.Args, "--render-preview") is { } previewDir)
+        {
+            RenderPreview(previewDir);
+            Shutdown();
+            return;
+        }
 
         Autostart.Register();
 
@@ -112,6 +124,27 @@ public partial class App : System.Windows.Application
                 _ambientSensor!.Start();
                 break;
         }
+    }
+
+    private static void RenderPreview(string outputDir)
+    {
+        Directory.CreateDirectory(outputDir);
+
+        var settings = Settings.Load();
+        ApplyTheme(settings.Theme);
+
+        var flyout = new FlyoutWindow(settings);
+        flyout.PrepareForPreview();
+        PreviewRenderer.Render(flyout, Path.Combine(outputDir, "flyout.png"), width: 400);
+
+        var settingsWindow = new SettingsWindow(settings);
+        PreviewRenderer.Render(settingsWindow, Path.Combine(outputDir, "settings.png"), width: 460);
+    }
+
+    private static string? GetArgValue(string[] args, string flag)
+    {
+        var index = Array.IndexOf(args, flag);
+        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
     }
 
     private static void ShowAbout()

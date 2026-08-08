@@ -9,52 +9,167 @@
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"
-                 ResizeMode="CanMinimize">
+                 ResizeMode="CanMinimize"
+                 Activated="SettingsWindow_Activated">
     <StackPanel>
-        <ui:TitleBar Title="DDCBright Settings"/>
-        <StackPanel Margin="20,4,20,20">
-            <TextBlock Text="Schedule" FontWeight="Bold" Margin="0,0,0,8"/>
-            <Grid Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="50"/>
-                    <ColumnDefinition Width="85"/>
-                    <ColumnDefinition Width="10"/>
-                    <ColumnDefinition Width="85"/>
-                    <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="130"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Day" VerticalAlignment="Center"/>
-                <ui:NumberBox x:Name="DayHourBox" Grid.Column="1"
-                              Minimum="0" Maximum="23" ValueChanged="DayTimeBox_ValueChanged"/>
-                <TextBlock Grid.Column="2" Text=":" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                <ui:NumberBox x:Name="DayMinuteBox" Grid.Column="3"
-                              Minimum="0" Maximum="59" ValueChanged="DayTimeBox_ValueChanged"/>
-                <ui:NumberBox x:Name="DayBrightnessBox" Grid.Column="5"
-                              Minimum="0" Maximum="100" SmallChange="5"
-                              ValueChanged="DayBrightnessBox_ValueChanged"/>
-            </Grid>
-            <Grid Margin="0,0,0,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="50"/>
-                    <ColumnDefinition Width="85"/>
-                    <ColumnDefinition Width="10"/>
-                    <ColumnDefinition Width="85"/>
-                    <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="130"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Night" VerticalAlignment="Center"/>
-                <ui:NumberBox x:Name="NightHourBox" Grid.Column="1"
-                              Minimum="0" Maximum="23" ValueChanged="NightTimeBox_ValueChanged"/>
-                <TextBlock Grid.Column="2" Text=":" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                <ui:NumberBox x:Name="NightMinuteBox" Grid.Column="3"
-                              Minimum="0" Maximum="59" ValueChanged="NightTimeBox_ValueChanged"/>
-                <ui:NumberBox x:Name="NightBrightnessBox" Grid.Column="5"
-                              Minimum="0" Maximum="100" SmallChange="5"
-                              ValueChanged="NightBrightnessBox_ValueChanged"/>
-            </Grid>
+        <ui:TitleBar Title="DDCBright Settings" />
 
-            <TextBlock Text="Ambient (webcam)" FontWeight="Bold" Margin="0,0,0,8"/>
-            <TextBlock Text="Coming soon." Opacity="0.7"/>
-        </StackPanel>
+        <Border Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" Padding="20">
+            <StackPanel>
+
+                <!-- Appearance -->
+                <TextBlock Text="Appearance" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="App theme" FontSize="13.5" />
+                            <TextBlock Text="Matches your Windows theme by default" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </StackPanel>
+                        <ComboBox x:Name="ThemeSelector" Grid.Column="1" Width="110" VerticalAlignment="Center"
+                                  SelectionChanged="ThemeSelector_SelectionChanged">
+                            <ComboBoxItem Content="System" />
+                            <ComboBoxItem Content="Light" />
+                            <ComboBoxItem Content="Dark" />
+                        </ComboBox>
+                    </Grid>
+                </Border>
+
+                <!-- Automatic brightness -->
+                <TextBlock Text="Automatic brightness" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                <Border Style="{StaticResource SettingsCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="Mode" FontSize="13.5" />
+                            <TextBlock x:Name="AutoModeStatusText" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="2" MinWidth="180" VerticalAlignment="Center">
+                            <UniformGrid Rows="1" Columns="3">
+                                <ToggleButton x:Name="AutoOffBtn" Content="Off" Style="{StaticResource SegmentToggleStyle}" />
+                                <ToggleButton x:Name="AutoScheduleBtn" Content="Schedule" Style="{StaticResource SegmentToggleStyle}" />
+                                <ToggleButton x:Name="AutoAmbientBtn" Content="Ambient" Style="{StaticResource SegmentToggleStyle}" />
+                            </UniformGrid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border x:Name="TransitionCard" Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Transition" FontSize="13.5" />
+                                <TextBlock Text="How brightness changes at the scheduled times" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Border Grid.Column="1" Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="2" MinWidth="150" VerticalAlignment="Center">
+                                <UniformGrid Rows="1" Columns="2">
+                                    <ToggleButton x:Name="TransitionInstantBtn" Content="Instant" Style="{StaticResource SegmentToggleStyle}" />
+                                    <ToggleButton x:Name="TransitionGradualBtn" Content="Gradual" Style="{StaticResource SegmentToggleStyle}" />
+                                </UniformGrid>
+                            </Border>
+                        </Grid>
+                        <Grid x:Name="FadeDurationRow" Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Fade over" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button x:Name="TransitionMinutesDown" Content="&#8722;" Style="{StaticResource StepperButtonStyle}" Click="TransitionMinutesDown_Click" />
+                                <TextBlock x:Name="TransitionMinutesLabel" FontSize="13" Width="56" TextAlignment="Center" VerticalAlignment="Center" Margin="10,0" />
+                                <Button x:Name="TransitionMinutesUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="TransitionMinutesUp_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid x:Name="ScheduleCardsRow">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Ellipse Width="14" Height="14" Fill="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="Day" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="Starts at" FontSize="11.5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,4" />
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" x:Name="DayTimeDown" Content="&#8722;" Style="{StaticResource StepperButtonStyle}" Click="DayTimeDown_Click" />
+                                <TextBlock Grid.Column="1" x:Name="DayTimeLabel" FontSize="13" TextAlignment="Center" VerticalAlignment="Center" />
+                                <Button Grid.Column="2" x:Name="DayTimeUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="DayTimeUp_Click" />
+                            </Grid>
+                            <TextBlock Text="Brightness" FontSize="11.5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,4" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" x:Name="DayBrightnessDown" Content="&#8722;" Style="{StaticResource StepperButtonStyle}" Click="DayBrightnessDown_Click" />
+                                <TextBlock Grid.Column="1" x:Name="DayBrightnessLabel" FontSize="13" TextAlignment="Center" VerticalAlignment="Center" />
+                                <Button Grid.Column="2" x:Name="DayBrightnessUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="DayBrightnessUp_Click" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource SettingsCardStyle}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Ellipse Width="10" Height="10" Fill="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.5" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="Night" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="Starts at" FontSize="11.5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,4" />
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" x:Name="NightTimeDown" Content="&#8722;" Style="{StaticResource StepperButtonStyle}" Click="NightTimeDown_Click" />
+                                <TextBlock Grid.Column="1" x:Name="NightTimeLabel" FontSize="13" TextAlignment="Center" VerticalAlignment="Center" />
+                                <Button Grid.Column="2" x:Name="NightTimeUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="NightTimeUp_Click" />
+                            </Grid>
+                            <TextBlock Text="Brightness" FontSize="11.5" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,0,4" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" x:Name="NightBrightnessDown" Content="&#8722;" Style="{StaticResource StepperButtonStyle}" Click="NightBrightnessDown_Click" />
+                                <TextBlock Grid.Column="1" x:Name="NightBrightnessLabel" FontSize="13" TextAlignment="Center" VerticalAlignment="Center" />
+                                <Button Grid.Column="2" x:Name="NightBrightnessUp" Content="+" Style="{StaticResource StepperButtonStyle}" Click="NightBrightnessUp_Click" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <TextBlock x:Name="OffModeHelperText"
+                           Text="Turn on Schedule or Ambient above to configure automatic adjustments."
+                           FontSize="12"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
     </StackPanel>
 </ui:FluentWindow>

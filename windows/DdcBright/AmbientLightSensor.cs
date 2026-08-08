@@ -13,8 +13,8 @@ namespace DdcBright;
 /// </summary>
 public class AmbientLightSensor
 {
-    private const int SampleIntervalSeconds = 30;
-    private const int MinBrightness = 10; // never auto-dim to fully black
+    internal const int SampleIntervalSeconds = 30;
+    internal const int MinBrightness = 10; // never auto-dim to fully black
     private const int ChangeThreshold = 5; // ignore small fluctuations
 
     private readonly Settings _settings;

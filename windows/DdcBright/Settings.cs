@@ -7,6 +7,8 @@ public enum ThemePreference { System, Light, Dark }
 
 public enum AutoBrightnessMode { Off, Schedule, Ambient }
 
+public enum ScheduleTransitionMode { Instant, Gradual }
+
 public class Settings
 {
     public ThemePreference Theme { get; set; } = ThemePreference.System;
@@ -16,6 +18,10 @@ public class Settings
     public TimeOnly NightTime { get; set; } = new(20, 0);
     public int DayBrightness { get; set; } = 80;
     public int NightBrightness { get; set; } = 30;
+
+    public bool SyncMonitors { get; set; } = false;
+    public ScheduleTransitionMode ScheduleTransition { get; set; } = ScheduleTransitionMode.Instant;
+    public int TransitionMinutes { get; set; } = 30;
 
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
