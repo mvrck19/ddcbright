@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Wpf.Ui.Appearance;
@@ -16,23 +15,15 @@ public partial class FlyoutWindow : FluentWindow
 
     private List<MonitorHandle> _monitors = [];
     private readonly Settings _settings;
+    private ThemePreference _lastAppliedTheme;
 
     public FlyoutWindow(Settings settings)
     {
         InitializeComponent();
         _settings = settings;
         ApplicationThemeManager.Apply(this);
-
-        SegmentedControlHelper.WireExclusive(AutoModeButtons, i =>
-        {
-            _settings.AutoBrightnessMode = (AutoBrightnessMode)i;
-            _settings.Save();
-            ((App)System.Windows.Application.Current).ApplyAutoBrightnessMode();
-            RefreshAutoModeUi();
-        });
+        _lastAppliedTheme = _settings.Theme;
     }
-
-    private ToggleButton[] AutoModeButtons => [AutoOffBtn, AutoScheduleBtn, AutoAmbientBtn];
 
     // Used by --render-preview: builds the same content ShowNearCursor()
     // would, without the cursor-position/Show() machinery a headless render
@@ -50,8 +41,31 @@ public partial class FlyoutWindow : FluentWindow
         // the real size. Show hidden, measure the real ActualWidth/Height,
         // reposition, then reveal -- avoids both an undersized-window bug
         // and a flash-then-jump.
+        //
+        // Re-applying theme here (not just once in the constructor) covers
+        // the flyout being shown after the user changed theme from Settings
+        // while the flyout was hidden -- its native chrome otherwise never
+        // finds out the theme changed. Only calling it when the theme
+        // actually changed since the last show, rather than unconditionally
+        // on every open, since ApplicationThemeManager.Apply(window) touches
+        // native chrome/backdrop setup that isn't free to redo.
+        if (_settings.Theme != _lastAppliedTheme)
+        {
+            ApplicationThemeManager.Apply(this);
+            _lastAppliedTheme = _settings.Theme;
+        }
         RebuildMonitorRows();
         RefreshAutoModeUi();
+
+        // This window is constructed once and reused for the app's whole
+        // lifetime, and SizeToContent can get stuck at a previous (taller)
+        // size across repeated Show()/Hide() cycles -- e.g. after showing
+        // once with a longer status line or an extra monitor row, it may
+        // never shrink back down for a shorter one. Clearing Width/Height
+        // back to Auto forces a fresh remeasure against the CURRENT content
+        // instead of whatever size the HWND already had cached.
+        Width = double.NaN;
+        Height = double.NaN;
         Opacity = 0;
         Show();
         UpdateLayout();
@@ -76,8 +90,23 @@ public partial class FlyoutWindow : FluentWindow
 
     private void RefreshAutoModeUi()
     {
-        SegmentedControlHelper.SetSelected(AutoModeButtons, (int)_settings.AutoBrightnessMode);
         AutoStatusText.Text = AutoModeStatus.GetText(_settings);
+
+        AutoModeBadgeText.Text = _settings.AutoBrightnessMode switch
+        {
+            AutoBrightnessMode.Schedule => "Schedule",
+            AutoBrightnessMode.Ambient => "Ambient",
+            _ => "Off",
+        };
+
+        // Plain colored text, no custom background -- reuses the same two
+        // brushes already relied on elsewhere in this window (secondary-gray
+        // body text, and the same accent brush the "Settings" link uses)
+        // rather than a one-off alpha-blended pill that isn't proven legible
+        // across both themes and every possible accent color.
+        AutoModeBadgeText.Foreground = _settings.AutoBrightnessMode == AutoBrightnessMode.Off
+            ? (Brush)FindResource("TextFillColorSecondaryBrush")
+            : (Brush)FindResource("SystemAccentColorPrimaryBrush");
     }
 
     private void RebuildMonitorRows()

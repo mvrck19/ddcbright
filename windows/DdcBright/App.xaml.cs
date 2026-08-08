@@ -11,7 +11,8 @@ public partial class App : System.Windows.Application
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private TrayIconScrollHook? _trayScrollHook;
     private readonly Debouncer _trayScrollDebouncer = new(TimeSpan.FromMilliseconds(80));
-    private int _pendingTrayScrollDelta;
+    private int? _trayBrightnessEstimate;
+    private BrightnessOsd? _osd;
     private FlyoutWindow? _flyout;
     private SettingsWindow? _settingsWindow;
     private Settings? _settings;
@@ -37,6 +38,12 @@ public partial class App : System.Windows.Application
         if (e.Args.Contains("--test-debouncer"))
         {
             TestDebouncer();
+            return;
+        }
+
+        if (e.Args.Contains("--test-flyout-resize"))
+        {
+            TestFlyoutResize();
             return;
         }
 
@@ -74,23 +81,38 @@ public partial class App : System.Windows.Application
             }
         };
 
+        _osd = new BrightnessOsd();
+
         // Scroll wheel over the tray icon adjusts every monitor's brightness
-        // directly, without opening the flyout. The hook callback runs
-        // synchronously on the low-level global input pipeline -- ALL
-        // system mouse input stalls while it runs, so it must never touch
-        // hardware directly. Each notch just accumulates a pending delta;
-        // a debounced flush (on a thread-pool thread, well after the hook
-        // returns) does the actual Get+Set round trip once scrolling
-        // pauses. This also sidesteps a real DDC/CI quirk: many monitors
-        // don't commit a SetBrightness write in time for an immediate
-        // re-read, so firing Get+Set once per notch in quick succession
-        // can make separate notches race and stomp on each other instead
-        // of adding up the way the user actually scrolled.
+        // directly, without opening the flyout, and shows the running
+        // percentage in a small OSD. The hook callback runs synchronously on
+        // the low-level global input pipeline -- ALL system mouse input
+        // stalls while it runs, so it must never touch hardware directly.
+        // Each notch only updates an in-memory target (cheap: no hardware
+        // I/O, safe to do inline) and refreshes the OSD from it; a debounced
+        // flush (on a thread-pool thread, well after the hook returns)
+        // writes that settled target to the monitors once scrolling pauses.
+        // Tracking a target in software like this -- rather than reading
+        // hardware brightness and adding a delta on every notch -- also
+        // sidesteps a real DDC/CI quirk: many monitors don't commit a
+        // SetBrightness write in time for an immediate re-read, so
+        // Get-then-Set once per notch in quick succession can make separate
+        // notches race the hardware and stomp on each other.
         _trayScrollHook = new TrayIconScrollHook(_trayIcon, direction =>
         {
-            Interlocked.Add(ref _pendingTrayScrollDelta, direction * TrayScrollStepPercent);
-            _trayScrollDebouncer.Trigger(() =>
-                AdjustAllMonitorsBrightness(Interlocked.Exchange(ref _pendingTrayScrollDelta, 0)));
+            if (_trayBrightnessEstimate is not { } current) return; // startup read hasn't landed yet
+            var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
+            _trayBrightnessEstimate = target;
+            _osd.ShowPercent(target);
+            _trayScrollDebouncer.Trigger(() => SetAllMonitorsBrightness(target));
+        });
+
+        // Seed the estimate once, off the UI thread, so the very first
+        // hook invocation above doesn't have to block on a DDC/CI read.
+        Task.Run(() =>
+        {
+            var monitors = MonitorControl.GetMonitors();
+            _trayBrightnessEstimate = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) : 50;
         });
 
         // Debug affordance: `ddcbright.exe --show` opens the flyout
@@ -156,15 +178,43 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private static void AdjustAllMonitorsBrightness(int delta)
+    private static void SetAllMonitorsBrightness(int value)
     {
-        if (delta == 0) return;
-
         foreach (var monitor in MonitorControl.GetMonitors())
+            MonitorControl.SetBrightness(monitor, value);
+    }
+
+    private static void TestFlyoutResize()
+    {
+        var log = new List<string>();
+        try
         {
-            var current = MonitorControl.GetBrightness(monitor);
-            MonitorControl.SetBrightness(monitor, Math.Clamp(current + delta, 0, 100));
+            // Reported repro: SAME content both times, just open/close/reopen.
+            var settings = new Settings { AutoBrightnessMode = AutoBrightnessMode.Off };
+
+            var flyout = new FlyoutWindow(settings);
+            flyout.ShowNearCursor();
+            var tallHeight = flyout.ActualHeight;
+            log.Add($"First open height: {tallHeight:F0}px");
+
+            flyout.Hide();
+            flyout.ShowNearCursor();
+            var shortHeight = flyout.ActualHeight;
+            log.Add($"Second open (same content) height: {shortHeight:F0}px");
+
+            log.Add(Math.Abs(shortHeight - tallHeight) < 1
+                ? "RESULT: PASS (same height both opens)"
+                : $"RESULT: FAIL (height changed by {shortHeight - tallHeight:F0}px on re-open with identical content)");
+
+            flyout.Close();
         }
+        catch (Exception ex)
+        {
+            log.Add($"RESULT: FAIL - {ex}");
+        }
+
+        File.WriteAllLines(Path.Combine(Path.GetTempPath(), "ddcbright_flyout_resize_test.txt"), log);
+        Current.Shutdown();
     }
 
     private static void TestDebouncer()

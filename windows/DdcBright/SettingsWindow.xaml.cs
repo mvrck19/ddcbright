@@ -82,6 +82,14 @@ public partial class SettingsWindow : FluentWindow
         _settings.Theme = (ThemePreference)ThemeSelector.SelectedIndex;
         _settings.Save();
         App.ApplyTheme(_settings.Theme);
+
+        // ApplyTheme swaps the global resource dictionaries, so DynamicResource-
+        // bound content updates everywhere immediately -- but a window's native
+        // chrome (title bar, Acrylic/Mica tint) is only set up by
+        // ApplicationThemeManager.Apply(window) once, in its constructor, and
+        // doesn't refresh on its own. Without this, this window can end up with
+        // content re-themed but chrome stuck on the old theme.
+        ApplicationThemeManager.Apply(this);
     }
 
     private void DayTimeDown_Click(object sender, RoutedEventArgs e) => AdjustDayTime(-15);
