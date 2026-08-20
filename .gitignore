@@ -8,6 +8,8 @@ packaging/windows/*.exe
 # .NET
 windows/DdcBright/bin/
 windows/DdcBright/obj/
+windows/DdcBright.UiTests/bin/
+windows/DdcBright.UiTests/obj/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

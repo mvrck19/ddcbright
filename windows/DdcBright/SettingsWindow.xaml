@@ -61,6 +61,33 @@
                     </Grid>
                 </Border>
 
+                <Border x:Name="AmbientCard" Style="{StaticResource SettingsCardStyle}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Camera" FontSize="13.5" />
+                                <TextBlock Text="Which camera to sample for ambient light" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ComboBox x:Name="AmbientCameraSelector" Grid.Column="1" Width="150" VerticalAlignment="Center"
+                                      SelectionChanged="AmbientCameraSelector_SelectionChanged" />
+                        </Grid>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="AmbientTestResultText" Grid.Column="0" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button Grid.Column="1" x:Name="AmbientTestButton" Content="Test now" Click="AmbientTestButton_Click" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <Border x:Name="TransitionCard" Style="{StaticResource SettingsCardStyle}">
                     <StackPanel>
                         <Grid>

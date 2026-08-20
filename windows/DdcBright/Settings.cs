@@ -19,14 +19,22 @@ public class Settings
     public int DayBrightness { get; set; } = 80;
     public int NightBrightness { get; set; } = 30;
 
+    public string? AmbientCameraId { get; set; } // null = system default camera
+
     public bool SyncMonitors { get; set; } = false;
     public ScheduleTransitionMode ScheduleTransition { get; set; } = ScheduleTransitionMode.Instant;
     public int TransitionMinutes { get; set; } = 30;
 
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ddcbright",
-        "settings.json");
+    // DDCBRIGHT_SETTINGS_PATH lets DdcBright.UiTests point Save()/Load() at
+    // an isolated file -- without it, every Settings instance (including a
+    // throwaway one built for --ui-test-settings) writes to the same real
+    // path, which corrupted a real settings.json the first time this was
+    // tried by hand.
+    private static readonly string FilePath = Environment.GetEnvironmentVariable("DDCBRIGHT_SETTINGS_PATH")
+        ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ddcbright",
+            "settings.json");
 
     public static Settings Load()
     {

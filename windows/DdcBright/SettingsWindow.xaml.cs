@@ -11,6 +11,7 @@ public partial class SettingsWindow : FluentWindow
 {
     private readonly Settings _settings;
     private bool _suppressEvents;
+    private List<(string Id, string Name)>? _cameras;
 
     public SettingsWindow(Settings settings)
     {
@@ -54,15 +55,58 @@ public partial class SettingsWindow : FluentWindow
         SegmentedControlHelper.SetSelected(TransitionButtons, (int)_settings.ScheduleTransition);
 
         var isSchedule = _settings.AutoBrightnessMode == AutoBrightnessMode.Schedule;
+        var isAmbient = _settings.AutoBrightnessMode == AutoBrightnessMode.Ambient;
         var isOff = _settings.AutoBrightnessMode == AutoBrightnessMode.Off;
         var isGradual = _settings.ScheduleTransition == ScheduleTransitionMode.Gradual;
 
         TransitionCard.Visibility = isSchedule ? Visibility.Visible : Visibility.Collapsed;
         ScheduleCardsRow.Visibility = isSchedule ? Visibility.Visible : Visibility.Collapsed;
         FadeDurationRow.Visibility = isSchedule && isGradual ? Visibility.Visible : Visibility.Collapsed;
+        AmbientCard.Visibility = isAmbient ? Visibility.Visible : Visibility.Collapsed;
         OffModeHelperText.Visibility = isOff ? Visibility.Visible : Visibility.Collapsed;
 
+        if (isAmbient && _cameras is null)
+            _ = PopulateCameraListAsync();
+
         RefreshScheduleFields();
+    }
+
+    private async Task PopulateCameraListAsync()
+    {
+        _cameras = await AmbientLightSensor.GetAvailableCamerasAsync();
+
+        _suppressEvents = true;
+        AmbientCameraSelector.Items.Clear();
+        AmbientCameraSelector.Items.Add("System default");
+        foreach (var camera in _cameras)
+            AmbientCameraSelector.Items.Add(camera.Name);
+
+        var selectedIndex = string.IsNullOrEmpty(_settings.AmbientCameraId)
+            ? 0
+            : _cameras.FindIndex(c => c.Id == _settings.AmbientCameraId) + 1;
+        AmbientCameraSelector.SelectedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+        _suppressEvents = false;
+    }
+
+    private void AmbientCameraSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressEvents || _cameras is null) return;
+
+        var index = AmbientCameraSelector.SelectedIndex;
+        _settings.AmbientCameraId = index <= 0 ? null : _cameras[index - 1].Id;
+        _settings.Save();
+        AmbientTestResultText.Text = string.Empty;
+    }
+
+    private async void AmbientTestButton_Click(object sender, RoutedEventArgs e)
+    {
+        AmbientTestButton.IsEnabled = false;
+        AmbientTestResultText.Text = "Testing…";
+
+        var result = await AmbientLightSensor.CaptureOnceAsync(_settings.AmbientCameraId);
+        AmbientTestResultText.Text = result.Message;
+
+        AmbientTestButton.IsEnabled = true;
     }
 
     private void RefreshScheduleFields()

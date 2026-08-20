@@ -70,6 +70,8 @@ Not implemented yet, but planned:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+For changes to the Windows app, verify with `dotnet test windows/DdcBright.UiTests/DdcBright.UiTests.csproj` (drives the real Settings window via FlaUI/UI Automation) before opening a PR.
+
 ## License
 
 This project is licensed under the MIT License.

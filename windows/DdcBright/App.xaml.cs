@@ -48,6 +48,38 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        // `ddcbright.exe --ui-test-settings` opens the Settings window on a
+        // throwaway in-memory Settings object (never touches settings.json)
+        // and keeps running -- for the DdcBright.UiTests project (FlaUI) to
+        // attach to and drive via real UI Automation. No Shutdown() here:
+        // unlike the other self-checks below, this one needs the Dispatcher
+        // to keep pumping so the external tool can interact with it.
+        //
+        // _settings/_scheduler/_ambientSensor must be set up for real (not
+        // skipped along with the tray/mutex/autostart below) -- clicking a
+        // mode button in Settings calls ApplyAutoBrightnessMode() on this
+        // App instance, which NullReferenceExceptions without them. Found by
+        // the very first UI test run against this flag.
+        if (e.Args.Contains("--ui-test-settings"))
+        {
+            _settings = new Settings();
+            _scheduler = new BrightnessScheduler(_settings);
+            _ambientSensor = new AmbientLightSensor(_settings);
+            _settingsWindow = new SettingsWindow(_settings);
+            _settingsWindow.Show();
+            return;
+        }
+
+        // `ddcbright.exe --test-ambient-light` does one webcam capture using
+        // the saved camera choice and reports exactly what happened --
+        // useful for checking whether an unsupported/old webcam is even
+        // detected, without opening the UI or needing Ambient mode running.
+        if (e.Args.Contains("--test-ambient-light"))
+        {
+            TestAmbientLight();
+            return;
+        }
+
         // Used by the installer's uninstaller, run before the exe it points
         // at gets deleted -- the app registers its own autostart entry on
         // every launch, so it also owns cleaning it up.
@@ -274,6 +306,41 @@ public partial class App : System.Windows.Application
         }
 
         File.WriteAllLines(Path.Combine(Path.GetTempPath(), "ddcbright_debouncer_test.txt"), log);
+        Current.Shutdown();
+    }
+
+    private static void TestAmbientLight()
+    {
+        var log = new List<string>();
+        try
+        {
+            var settings = Settings.Load();
+
+            // Task.Run, not a direct .GetAwaiter().GetResult(), matters here:
+            // this runs during OnStartup, before Application.Run has started
+            // pumping the Dispatcher. A direct blocking wait would capture
+            // the (not-yet-pumping) DispatcherSynchronizationContext for each
+            // `await` inside AmbientLightSensor, and every continuation would
+            // then sit queued forever waiting for a message loop that can't
+            // run because this very call is blocking it -- a classic
+            // sync-over-async deadlock. Task.Run hops onto a thread-pool
+            // thread with no captured context, so awaits resume there instead.
+            var cameras = Task.Run(AmbientLightSensor.GetAvailableCamerasAsync).GetAwaiter().GetResult();
+            log.Add(cameras.Count == 0
+                ? "Cameras detected by Windows: none"
+                : $"Cameras detected by Windows: {string.Join(", ", cameras.Select(c => c.Name))}");
+
+            var result = Task.Run(() => AmbientLightSensor.CaptureOnceAsync(settings.AmbientCameraId)).GetAwaiter().GetResult();
+            log.Add(result.Success
+                ? $"RESULT: PASS - {result.Message} (luma={result.Luma})"
+                : $"RESULT: FAIL - {result.Message}");
+        }
+        catch (Exception ex)
+        {
+            log.Add($"RESULT: FAIL - {ex}");
+        }
+
+        File.WriteAllLines(Path.Combine(Path.GetTempPath(), "ddcbright_ambient_test.txt"), log);
         Current.Shutdown();
     }
 
