@@ -1,70 +1,51 @@
-# ddcbright - Brightness Control Application
+# DDCBright
 
-A tray/menu-bar utility for controlling monitor brightness over DDC/CI. It sits in the
-system tray with a sun icon; click it to open the brightness flyout. It registers itself
-to start automatically at login, so you don't need to launch it by hand each session.
+Screen brightness, actually controlled. A native Windows tray app for DDC/CI
+monitor brightness — no Electron, no bundled runtime, just a real Mica
+flyout that matches your Windows theme and gets out of your way.
 
-## Platform support
+<table>
+<tr>
+<td><img src="assets/screenshots/flyout-dark.png" width="320" alt="DDCBright flyout, dark theme, Ambient mode"></td>
+<td><img src="assets/screenshots/settings-ambient.png" width="380" alt="DDCBright Settings, Ambient mode with the webcam Camera picker"></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/flyout-light.png" width="320" alt="DDCBright flyout, light theme, Schedule mode"></td>
+<td><img src="assets/screenshots/settings-schedule.png" width="380" alt="DDCBright Settings, Schedule mode with a gradual fade"></td>
+</tr>
+</table>
 
-Each platform gets its own native implementation rather than one shared compromise UI:
+## Features
 
-- **Windows**: a native C#/WPF app (`windows/DdcBright/`) with a real Mica/Acrylic
-  flyout, matching your Windows light/dark theme and accent color.
-- **Linux**: a Python/PyQt5 app (`ddcbright/`) via
-  [`monitorcontrol`](https://github.com/newAM/monitorcontrol) for DDC/CI, packaged as
-  `.deb` or Flatpak.
-- **macOS**: not currently supported (`monitorcontrol` has no macOS backend).
+- **Flyout** — click the tray icon, drag a slider per monitor, done. Scroll over the tray icon to nudge brightness without even opening it.
+- **Schedule** — dim in the evening, brighten in the morning, with an optional gradual fade instead of an instant jump.
+- **Ambient** — samples your webcam every 30 seconds and estimates room brightness instead of following a fixed clock. Never dims below 10%, and Settings has a camera picker plus a one-click "Test now" to check it's actually reading your camera.
+- **Native UI** — real Mica/Acrylic, matches your Windows light/dark theme and accent color, not a repainted cross-platform toolkit window.
+- **Quiet** — registers its own autostart at login on first run; no installer nagging, no background service beyond the tray icon itself.
 
-## Installation
+## Install
 
-Grab the asset for your platform from the [Releases](https://github.com/mvrck19/ddcbright/releases)
-page:
+Grab an asset from [Releases](https://github.com/mvrck19/ddcbright/releases):
 
-### Windows
-
-- **Installer**: download `ddcbright-setup.exe` and run it — adds a Start Menu shortcut
-  and a proper entry in Add/Remove Programs. No admin rights needed (installs to your
-  user profile).
-- **Portable**: download `ddcbright.exe` and run it directly — self-contained, nothing
-  to install, nothing left behind but the autostart entry it registers on first run.
-
-### Linux
-
-```bash
-sudo dpkg -i ddcbright.deb
-pip install monitorcontrol  # not packaged for apt; one-time step
-```
-
-or install the Flatpak bundle:
-
-```bash
-flatpak install ddcbright.flatpak
-```
-
-### Run from source (Linux, or Windows without the native app)
-
-```bash
-git clone https://github.com/mvrck19/ddcbright.git
-cd ddcbright
-pip install -r requirements.txt
-python -m ddcbright
-```
-
-The first run registers autostart-at-login automatically (Windows: a Registry `Run` entry;
-Linux: an `~/.config/autostart/ddcbright.desktop` entry). Quit any time from the tray menu.
+- **Installer** — download `ddcbright-setup.exe` and run it. Adds a Start Menu shortcut and a proper Add/Remove Programs entry. No admin rights needed (installs to your user profile).
+- **Portable** — download `ddcbright.exe` and run it directly. Self-contained, nothing to install, nothing left behind but the autostart entry it registers on first run.
 
 ## Troubleshooting
 
-- Make sure your monitor supports DDC/CI and it's enabled in the monitor's OSD menu.
-- **Linux**: your user needs access to the I2C devices — add yourself to the `i2c` group
-  (`sudo usermod -aG i2c $USER`, then log out and back in).
-- **Windows**: no extra setup needed; DDC/CI access uses the OS's own display API.
+- Make sure your monitor supports DDC/CI and it's enabled in the monitor's OSD menu — DDC/CI access uses the OS's own display API, no extra setup needed on Windows.
+- Ambient mode not reacting? Open Settings → Ambient → **Test now** to see exactly what the camera captured, or check `%AppData%\ddcbright\ambient.log` for a per-attempt history.
 
-## Roadmap
+## Linux (secondary)
 
-Not implemented yet, but planned:
-- Brightness schedules (e.g. dim automatically in the evening)
-- Ambient-light-based auto-brightness using the webcam
+A separate Python/PyQt5 implementation lives in `ddcbright/`, built on [`monitorcontrol`](https://github.com/newAM/monitorcontrol) for DDC/CI. It gets less attention than the Windows app.
+
+```bash
+sudo dpkg -i ddcbright.deb && pip install monitorcontrol   # not packaged for apt
+# or
+flatpak install ddcbright.flatpak
+```
+
+Needs `i2c` group access: `sudo usermod -aG i2c $USER`, then log out and back in. macOS isn't supported (`monitorcontrol` has no macOS backend).
 
 ## Contributing
 
@@ -74,4 +55,4 @@ For changes to the Windows app, verify with `dotnet test windows/DdcBright.UiTes
 
 ## License
 
-This project is licensed under the MIT License.
+[MIT](LICENSE)
