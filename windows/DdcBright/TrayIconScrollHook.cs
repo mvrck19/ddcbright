@@ -19,15 +19,18 @@ internal sealed class TrayIconScrollHook : IDisposable
     private const int WH_MOUSE_LL = 14;
     private const int WM_MOUSEWHEEL = 0x020A;
 
+    // internal (not private): lets DdcBright.Tests/DdcBright.Benchmarks
+    // construct these directly to exercise TryGetScrollDirection without
+    // installing a real global hook or faking a NotifyIcon.
     [StructLayout(LayoutKind.Sequential)]
-    private struct Point
+    internal struct Point
     {
         public int X;
         public int Y;
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct MouseLowLevelHookStruct
+    internal struct MouseLowLevelHookStruct
     {
         public Point Pt;
         public uint MouseData;
@@ -37,7 +40,7 @@ internal sealed class TrayIconScrollHook : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct Rect
+    internal struct Rect
     {
         public int Left, Top, Right, Bottom;
     }
@@ -99,11 +102,8 @@ internal sealed class TrayIconScrollHook : IDisposable
             if (code >= 0 && wParam.ToInt32() == WM_MOUSEWHEEL)
             {
                 var data = Marshal.PtrToStructure<MouseLowLevelHookStruct>(lParam);
-                if (TryGetIconRect(out var rect) && IsInside(data.Pt, rect))
-                {
-                    var wheelDelta = unchecked((short)(data.MouseData >> 16));
-                    _onScroll(Math.Sign(wheelDelta));
-                }
+                if (TryGetIconRect(out var rect) && TryGetScrollDirection(data, rect, out var direction))
+                    _onScroll(direction);
             }
         }
         catch
@@ -112,6 +112,22 @@ internal sealed class TrayIconScrollHook : IDisposable
             // crashing the app.
         }
         return CallNextHookEx(_hookHandle, code, wParam, lParam);
+    }
+
+    /// <summary>
+    /// The pure decision logic of the hook callback, pulled out so it can be
+    /// unit-tested and benchmarked without installing a real global hook or
+    /// a live NotifyIcon: given a wheel event already known to have occurred
+    /// (see HookCallback), decide whether the cursor was over the tray icon
+    /// and, if so, which way it scrolled.
+    /// </summary>
+    internal static bool TryGetScrollDirection(MouseLowLevelHookStruct data, Rect iconRect, out int direction)
+    {
+        direction = 0;
+        if (!IsInside(data.Pt, iconRect)) return false;
+        var wheelDelta = unchecked((short)(data.MouseData >> 16));
+        direction = Math.Sign(wheelDelta);
+        return true;
     }
 
     private bool TryGetIconRect(out Rect rect)

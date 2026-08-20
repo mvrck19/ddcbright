@@ -26,4 +26,10 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet build windows/DdcBright/DdcBright.csproj -c Debug
+      - run: dotnet test windows/DdcBright.Tests/DdcBright.Tests.csproj -c Debug
       - run: dotnet test windows/DdcBright.UiTests/DdcBright.UiTests.csproj -c Debug
+      # Compile-only: keeps the benchmark suite from bit-rotting into a
+      # non-building state. Not run here -- BenchmarkDotNet's statistical
+      # benchmarks are noisy on shared CI runners, so they're local/manual
+      # only (see windows/DdcBright.Benchmarks/README.md).
+      - run: dotnet build windows/DdcBright.Benchmarks/DdcBright.Benchmarks.csproj -c Release

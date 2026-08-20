@@ -34,4 +34,9 @@
     <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="DdcBright.Tests" />
+    <InternalsVisibleTo Include="DdcBright.Benchmarks" />
+  </ItemGroup>
+
 </Project>
