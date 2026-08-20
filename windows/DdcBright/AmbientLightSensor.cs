@@ -212,7 +212,7 @@ public class AmbientLightSensor
         }
     }
 
-    private static unsafe int ComputeAverageLuma(SoftwareBitmap bitmap)
+    internal static unsafe int ComputeAverageLuma(SoftwareBitmap bitmap)
     {
         using var buffer = bitmap.LockBuffer(BitmapBufferAccessMode.Read);
         using var reference = buffer.CreateReference();
@@ -238,7 +238,7 @@ public class AmbientLightSensor
         return count == 0 ? 128 : (int)(total / count);
     }
 
-    private static int MapLumaToBrightness(int luma)
+    internal static int MapLumaToBrightness(int luma)
     {
         var percent = MinBrightness + (int)(luma / 255.0 * (100 - MinBrightness));
         return Math.Clamp(percent, MinBrightness, 100);

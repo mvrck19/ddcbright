@@ -155,14 +155,26 @@ public partial class App : System.Windows.Application
         // SetBrightness write in time for an immediate re-read, so
         // Get-then-Set once per notch in quick succession can make separate
         // notches race the hardware and stomp on each other.
-        _trayScrollHook = new TrayIconScrollHook(_trayIcon, direction =>
+        // Skip installing the hook entirely while a debugger is attached.
+        // Windows serializes global mouse input through WH_MOUSE_LL hooks:
+        // if the owning thread (this one) stops responding -- suspended at
+        // a breakpoint, or torn down mid-restart during an edit/rebuild/
+        // relaunch cycle -- system-wide mouse input can stall until this
+        // hook responds or Windows' hook-timeout kicks in
+        // (HKCU\Control Panel\Desktop\LowLevelHooksTimeout). Scroll-to-
+        // adjust over the tray icon is a nicety, not worth that risk during
+        // development.
+        if (!System.Diagnostics.Debugger.IsAttached)
         {
-            if (_trayBrightnessEstimate is not { } current) return; // startup read hasn't landed yet
-            var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
-            _trayBrightnessEstimate = target;
-            _osd.ShowPercent(target);
-            _trayScrollDebouncer.Trigger(() => SetAllMonitorsBrightness(target));
-        });
+            _trayScrollHook = new TrayIconScrollHook(_trayIcon, direction =>
+            {
+                if (_trayBrightnessEstimate is not { } current) return; // startup read hasn't landed yet
+                var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
+                _trayBrightnessEstimate = target;
+                _osd.ShowPercent(target);
+                _trayScrollDebouncer.Trigger(() => SetAllMonitorsBrightness(target));
+            });
+        }
 
         // Seed the estimate once, off the UI thread, so the very first
         // hook invocation above doesn't have to block on a DDC/CI read.

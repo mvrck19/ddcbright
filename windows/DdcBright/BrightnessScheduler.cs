@@ -91,9 +91,12 @@ public class BrightnessScheduler
         }
 
         var t = (now - start).TotalSeconds / (end - start).TotalSeconds;
-        var value = _fadeStartBrightness + (_fadeTargetBrightness - _fadeStartBrightness) * t;
-        ApplyToAllMonitors((int)Math.Round(value));
+        ApplyToAllMonitors(InterpolateBrightness(_fadeStartBrightness, _fadeTargetBrightness, t));
     }
+
+    /// <summary>Pure fade math, pulled out of AdvanceFade so it's testable/benchmarkable without a real timer or wall clock.</summary>
+    internal static int InterpolateBrightness(int start, int target, double t) =>
+        (int)Math.Round(start + (target - start) * t);
 
     private static void ApplyToAllMonitors(int brightness)
     {
@@ -101,7 +104,7 @@ public class BrightnessScheduler
             MonitorControl.SetBrightness(monitor, brightness);
     }
 
-    private static bool IsDayPeriod(TimeOnly now, TimeOnly dayStart, TimeOnly nightStart)
+    internal static bool IsDayPeriod(TimeOnly now, TimeOnly dayStart, TimeOnly nightStart)
     {
         if (dayStart < nightStart)
             return now >= dayStart && now < nightStart;
