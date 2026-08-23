@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using Brush = System.Windows.Media.Brush;
@@ -147,16 +146,18 @@ public partial class FlyoutWindow : FluentWindow
     private FrameworkElement BuildMonitorRow(string name, int brightness, Func<int, bool> onChanged)
     {
         var secondaryBrush = (Brush)FindResource("TextFillColorSecondaryBrush");
-        var dotBrush = (Brush)FindResource("TextFillColorPrimaryBrush");
 
-        var header = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var header = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6) };
+        header.Children.Add(new SymbolIcon
+        {
+            Symbol = SymbolRegular.Desktop24,
+            FontSize = 14,
+            Margin = new Thickness(0, 0, 6, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        header.Children.Add(new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
 
-        var nameLabel = new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeights.SemiBold };
-        Grid.SetColumn(nameLabel, 0);
-
-        var percentLabel = new TextBlock { Text = $"{brightness}%", FontSize = 13, Foreground = secondaryBrush };
+        var percentLabel = new TextBlock { Text = $"{brightness}%", FontSize = 13, Foreground = secondaryBrush, VerticalAlignment = VerticalAlignment.Center };
 
         var warningIcon = new TextBlock
         {
@@ -169,32 +170,16 @@ public partial class FlyoutWindow : FluentWindow
             ToolTip = "This monitor didn't respond to the brightness change.",
         };
 
-        var percentPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
-        Grid.SetColumn(percentPanel, 1);
-        percentPanel.Children.Add(percentLabel);
-        percentPanel.Children.Add(warningIcon);
-
-        header.Children.Add(nameLabel);
-        header.Children.Add(percentPanel);
-
         var sliderRow = new Grid();
-        sliderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         sliderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         sliderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var dimDot = new Ellipse
-        {
-            Width = 7, Height = 7, Fill = dotBrush, Opacity = 0.5,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
-        };
-        Grid.SetColumn(dimDot, 0);
 
         var slider = new Slider
         {
             Minimum = 0, Maximum = 100, Value = brightness,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        Grid.SetColumn(slider, 1);
+        Grid.SetColumn(slider, 0);
         slider.ValueChanged += (_, e) =>
         {
             var value = (int)e.NewValue;
@@ -206,16 +191,13 @@ public partial class FlyoutWindow : FluentWindow
             RefreshAutoModeUi();
         };
 
-        var brightDot = new Ellipse
-        {
-            Width = 14, Height = 14, Fill = dotBrush,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0),
-        };
-        Grid.SetColumn(brightDot, 2);
+        var percentPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(10, 0, 0, 0) };
+        Grid.SetColumn(percentPanel, 1);
+        percentPanel.Children.Add(percentLabel);
+        percentPanel.Children.Add(warningIcon);
 
-        sliderRow.Children.Add(dimDot);
         sliderRow.Children.Add(slider);
-        sliderRow.Children.Add(brightDot);
+        sliderRow.Children.Add(percentPanel);
 
         var row = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         row.Children.Add(header);
