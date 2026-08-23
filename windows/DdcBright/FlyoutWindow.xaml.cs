@@ -211,7 +211,9 @@ public partial class FlyoutWindow : FluentWindow
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
             warningIcon.Visibility = onChanged(value) ? Visibility.Collapsed : Visibility.Visible;
-            ((App)System.Windows.Application.Current).ExitAutoModeIfActive();
+            var app = (App)System.Windows.Application.Current;
+            app.ExitAutoModeIfActive();
+            app.UpdateTrayTooltip(value);
             RefreshAutoModeUi();
         };
 

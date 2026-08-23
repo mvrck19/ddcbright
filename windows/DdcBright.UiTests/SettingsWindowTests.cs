@@ -18,7 +18,7 @@ namespace DdcBright.UiTests;
 public class SettingsWindowTests
 {
     [Fact]
-    public void SwitchingToAmbientMode_ShowsCameraCardAndHidesOffHelperText()
+    public void SwitchingToAmbientMode_ShowsCameraCard()
     {
         using var app = DdcBrightApp.Launch("--ui-test-settings");
         var window = app.MainWindow;
@@ -28,7 +28,6 @@ public class SettingsWindowTests
             () => window.FindFirstDescendant(cf => cf.ByAutomationId("AmbientCameraSelector")) is not null);
 
         Assert.NotNull(window.FindFirstDescendant(cf => cf.ByAutomationId("AmbientTestButton")));
-        Assert.Null(window.FindFirstDescendant(cf => cf.ByAutomationId("OffModeHelperText")));
     }
 
     [Fact]
@@ -42,7 +41,6 @@ public class SettingsWindowTests
             () => window.FindFirstDescendant(cf => cf.ByAutomationId("TransitionInstantBtn")) is not null);
 
         Assert.NotNull(window.FindFirstDescendant(cf => cf.ByAutomationId("TransitionGradualBtn")));
-        Assert.Null(window.FindFirstDescendant(cf => cf.ByAutomationId("OffModeHelperText")));
     }
 
     [Fact]

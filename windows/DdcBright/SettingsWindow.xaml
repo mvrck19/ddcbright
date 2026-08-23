@@ -25,16 +25,20 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="App theme" FontSize="13.5" />
-                            <TextBlock Text="Matches your Windows theme by default" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                        </StackPanel>
-                        <ComboBox x:Name="ThemeSelector" Grid.Column="1" Width="110" VerticalAlignment="Center"
-                                  SelectionChanged="ThemeSelector_SelectionChanged">
-                            <ComboBoxItem Content="System" />
-                            <ComboBoxItem Content="Light" />
-                            <ComboBoxItem Content="Dark" />
-                        </ComboBox>
+                        <TextBlock Grid.Column="0" Text="App theme" FontSize="13.5" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="2" VerticalAlignment="Center">
+                            <UniformGrid Rows="1" Columns="3">
+                                <ToggleButton x:Name="ThemeSystemBtn" Width="36" Height="28" Style="{StaticResource SegmentToggleStyle}" ToolTip="System">
+                                    <ui:SymbolIcon Symbol="Desktop24" FontSize="15" />
+                                </ToggleButton>
+                                <ToggleButton x:Name="ThemeLightBtn" Width="36" Height="28" Style="{StaticResource SegmentToggleStyle}" ToolTip="Light">
+                                    <ui:SymbolIcon Symbol="WeatherSunny24" FontSize="15" />
+                                </ToggleButton>
+                                <ToggleButton x:Name="ThemeDarkBtn" Width="36" Height="28" Style="{StaticResource SegmentToggleStyle}" ToolTip="Dark">
+                                    <ui:SymbolIcon Symbol="WeatherMoon24" FontSize="15" />
+                                </ToggleButton>
+                            </UniformGrid>
+                        </Border>
                     </Grid>
                 </Border>
 
@@ -46,10 +50,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                            <TextBlock Text="Launch at startup" FontSize="13.5" />
-                            <TextBlock Text="Start DdcBright automatically when you sign in" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                        </StackPanel>
+                        <TextBlock Grid.Column="0" Text="Launch at startup" FontSize="13.5" VerticalAlignment="Center" />
                         <ToggleButton x:Name="LaunchAtStartupToggle" Grid.Column="1" Style="{StaticResource PillToggleStyle}"
                                       VerticalAlignment="Center" Click="LaunchAtStartupToggle_Click" />
                     </Grid>
@@ -85,10 +86,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock Text="Camera" FontSize="13.5" />
-                                <TextBlock Text="Which camera to sample for ambient light" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
+                            <TextBlock Grid.Column="0" Text="Camera" FontSize="13.5" VerticalAlignment="Center" Margin="0,0,12,0" />
                             <ComboBox x:Name="AmbientCameraSelector" Grid.Column="1" Width="150" VerticalAlignment="Center"
                                       SelectionChanged="AmbientCameraSelector_SelectionChanged" />
                         </Grid>
@@ -112,10 +110,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock Text="Transition" FontSize="13.5" />
-                                <TextBlock Text="How brightness changes at the scheduled times" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
+                            <TextBlock Grid.Column="0" Text="Transition" FontSize="13.5" VerticalAlignment="Center" Margin="0,0,12,0" />
                             <Border Grid.Column="1" Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="2" MinWidth="150" VerticalAlignment="Center">
                                 <UniformGrid Rows="1" Columns="2">
                                     <ToggleButton x:Name="TransitionInstantBtn" Content="Instant" Style="{StaticResource SegmentToggleStyle}" />
@@ -207,12 +202,6 @@
                         </StackPanel>
                     </Border>
                 </Grid>
-
-                <TextBlock x:Name="OffModeHelperText"
-                           Text="Turn on Schedule or Ambient above to configure automatic adjustments."
-                           FontSize="12"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                           TextWrapping="Wrap" />
             </StackPanel>
         </Border>
     </StackPanel>

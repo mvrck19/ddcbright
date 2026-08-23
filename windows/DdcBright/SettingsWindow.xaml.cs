@@ -19,9 +19,24 @@ public partial class SettingsWindow : FluentWindow
         _settings = settings;
         ApplicationThemeManager.Apply(this);
 
-        _suppressEvents = true;
-        ThemeSelector.SelectedIndex = (int)_settings.Theme;
-        _suppressEvents = false;
+        SegmentedControlHelper.SetSelected(ThemeButtons, (int)_settings.Theme);
+        SegmentedControlHelper.WireExclusive(ThemeButtons, i =>
+        {
+            _settings.Theme = (ThemePreference)i;
+            _settings.Save();
+            App.ApplyTheme(_settings.Theme);
+
+            // ApplyTheme swaps the global resource dictionaries, so DynamicResource-
+            // bound content updates everywhere immediately -- but re-calling
+            // ApplicationThemeManager.Apply(window) on an already-initialized
+            // window only re-swaps resources again, it doesn't re-trigger the
+            // native Mica material, which is what actually left this window
+            // with re-themed content sitting on a backdrop tinted for the old
+            // theme. WindowBackgroundManager.UpdateBackground is WPF-UI's own
+            // explicit "re-apply the backdrop effect" call for that case.
+            ApplicationThemeManager.Apply(this);
+            WindowBackgroundManager.UpdateBackground(this, ApplicationThemeManager.GetAppTheme(), WindowBackdropType.Mica);
+        });
 
         LaunchAtStartupToggle.IsChecked = _settings.LaunchAtStartup;
 
@@ -50,6 +65,7 @@ public partial class SettingsWindow : FluentWindow
         if (_settings.LaunchAtStartup) Autostart.Register(); else Autostart.Unregister();
     }
 
+    private ToggleButton[] ThemeButtons => [ThemeSystemBtn, ThemeLightBtn, ThemeDarkBtn];
     private ToggleButton[] ModeButtons => [AutoOffBtn, AutoScheduleBtn, AutoAmbientBtn];
     private ToggleButton[] TransitionButtons => [TransitionInstantBtn, TransitionGradualBtn];
 
@@ -65,14 +81,12 @@ public partial class SettingsWindow : FluentWindow
 
         var isSchedule = _settings.AutoBrightnessMode == AutoBrightnessMode.Schedule;
         var isAmbient = _settings.AutoBrightnessMode == AutoBrightnessMode.Ambient;
-        var isOff = _settings.AutoBrightnessMode == AutoBrightnessMode.Off;
         var isGradual = _settings.ScheduleTransition == ScheduleTransitionMode.Gradual;
 
         TransitionCard.Visibility = isSchedule ? Visibility.Visible : Visibility.Collapsed;
         ScheduleCardsRow.Visibility = isSchedule ? Visibility.Visible : Visibility.Collapsed;
         FadeDurationRow.Visibility = isSchedule && isGradual ? Visibility.Visible : Visibility.Collapsed;
         AmbientCard.Visibility = isAmbient ? Visibility.Visible : Visibility.Collapsed;
-        OffModeHelperText.Visibility = isOff ? Visibility.Visible : Visibility.Collapsed;
 
         if (isAmbient && _cameras is null)
             _ = PopulateCameraListAsync();
@@ -126,26 +140,6 @@ public partial class SettingsWindow : FluentWindow
         NightBrightnessLabel.Text = $"{_settings.NightBrightness}%";
         TransitionMinutesLabel.Text = $"{_settings.TransitionMinutes} min";
         AutoModeStatusText.Text = AutoModeStatus.GetText(_settings);
-    }
-
-    private void ThemeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_suppressEvents) return;
-
-        _settings.Theme = (ThemePreference)ThemeSelector.SelectedIndex;
-        _settings.Save();
-        App.ApplyTheme(_settings.Theme);
-
-        // ApplyTheme swaps the global resource dictionaries, so DynamicResource-
-        // bound content updates everywhere immediately -- but re-calling
-        // ApplicationThemeManager.Apply(window) on an already-initialized
-        // window only re-swaps resources again, it doesn't re-trigger the
-        // native Mica material, which is what actually left this window
-        // with re-themed content sitting on a backdrop tinted for the old
-        // theme. WindowBackgroundManager.UpdateBackground is WPF-UI's own
-        // explicit "re-apply the backdrop effect" call for that case.
-        ApplicationThemeManager.Apply(this);
-        WindowBackgroundManager.UpdateBackground(this, ApplicationThemeManager.GetAppTheme(), WindowBackdropType.Mica);
     }
 
     private void DayTimeDown_Click(object sender, RoutedEventArgs e) => AdjustDayTime(-15);

@@ -182,6 +182,7 @@ public partial class App : System.Windows.Application
                 var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
                 _trayBrightnessEstimate = target;
                 _osd.ShowPercent(target);
+                UpdateTrayTooltip(target);
                 _trayScrollDebouncer.Trigger(() =>
                 {
                     ExitAutoModeIfActive();
@@ -195,7 +196,9 @@ public partial class App : System.Windows.Application
         Task.Run(() =>
         {
             var monitors = MonitorControl.GetMonitors();
-            _trayBrightnessEstimate = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) ?? 50 : 50;
+            var estimate = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) ?? 50 : 50;
+            _trayBrightnessEstimate = estimate;
+            UpdateTrayTooltip(estimate);
         });
 
         // Debug affordance: `ddcbright.exe --show` opens the flyout
@@ -287,6 +290,11 @@ public partial class App : System.Windows.Application
         _settings.Save();
         ApplyAutoBrightnessMode();
     }
+
+    // Hovering the tray icon shows the current brightness rather than the
+    // app name -- that's more useful at a glance, and "DdcBright" is
+    // already visible from the icon itself being in the tray.
+    internal void UpdateTrayTooltip(int percent) => _trayIcon!.Text = $"{percent}%";
 
     private static void SetAllMonitorsBrightness(int value)
     {
