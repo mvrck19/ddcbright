@@ -116,7 +116,7 @@ public partial class FlyoutWindow : FluentWindow
         MonitorRowsPanel.Children.Clear();
         _monitors = MonitorControl.GetMonitors();
 
-        LinkMonitorsRow.Visibility = _monitors.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        LinkMonitorsToggle.Visibility = _monitors.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
         LinkMonitorsToggle.IsChecked = _settings.SyncMonitors;
 
         if (_monitors.Count == 0)
@@ -248,6 +248,6 @@ public partial class FlyoutWindow : FluentWindow
         RebuildMonitorRows();
     }
 
-    private void SettingsLink_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
         => ((App)System.Windows.Application.Current).ShowSettings();
 }

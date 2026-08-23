@@ -15,22 +15,32 @@
                  Deactivated="Window_Deactivated">
     <StackPanel Width="340" Margin="16">
 
-        <Grid x:Name="LinkMonitorsRow" Margin="0,0,0,12" Visibility="Collapsed">
+        <!-- Compact icon-only header: both are utility controls (not
+             brightness content itself), so they share one row in the
+             top-right corner instead of each claiming a full-width row of
+             their own. LinkMonitorsToggle used to sit in its own row with
+             a text label, and Settings used to sit alone at the bottom
+             behind a divider. -->
+        <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0"
-                       Text="Link monitors"
-                       FontSize="11.5"
-                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                       HorizontalAlignment="Right"
-                       VerticalAlignment="Center"
-                       Margin="0,0,6,0" />
             <ToggleButton x:Name="LinkMonitorsToggle"
                           Grid.Column="1"
                           Style="{StaticResource PillToggleStyle}"
+                          ToolTip="Link monitors"
+                          Visibility="Collapsed"
+                          Margin="0,0,10,0"
                           Click="LinkMonitorsToggle_Click" />
+            <ui:Button x:Name="SettingsButton"
+                       Grid.Column="2"
+                       Appearance="Transparent"
+                       Icon="{ui:SymbolIcon Symbol=Settings24}"
+                       ToolTip="Settings"
+                       Padding="6"
+                       Click="SettingsButton_Click" />
         </Grid>
 
         <StackPanel x:Name="MonitorRowsPanel" />
@@ -60,14 +70,5 @@
                        TextWrapping="Wrap"
                        Margin="0,0,0,16" />
         </StackPanel>
-
-        <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,0,0,12" />
-        <TextBlock x:Name="SettingsLink"
-                   Text="Settings"
-                   FontSize="13"
-                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                   HorizontalAlignment="Right"
-                   Cursor="Hand"
-                   MouseLeftButtonUp="SettingsLink_MouseLeftButtonUp" />
     </StackPanel>
 </ui:FluentWindow>
