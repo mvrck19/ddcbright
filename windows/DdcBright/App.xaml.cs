@@ -333,6 +333,32 @@ public partial class App : System.Windows.Application
                 ? "RESULT: PASS (same height both opens)"
                 : $"RESULT: FAIL (height changed by {shortHeight - tallHeight:F0}px on re-open with identical content)");
 
+            // Reported repro #2: toggling a mode on then off again IN PLACE
+            // (header icon click, not a Hide/Show cycle) used to leave the
+            // window stuck at the taller "mode on" height instead of
+            // shrinking back down once AutoBrightnessSection collapsed again.
+            // The meaningful invariant isn't "matches some earlier
+            // measurement" (ShowNearCursor's own reset turned out to settle
+            // at a slightly-too-wide/tall fixed point across repeated opens
+            // in testing, unrelated to this fix) -- it's "shrinking removes
+            // exactly what the section was contributing," i.e. no leftover
+            // blank gap where its content used to be.
+            settings.AutoBrightnessMode = AutoBrightnessMode.Schedule;
+            flyout.RefreshAutoModeUi();
+            var onHeight = flyout.ActualHeight;
+            var sectionHeight = flyout.AutoBrightnessSection.ActualHeight;
+            log.Add($"On (Schedule) height: {onHeight:F0}px, section height: {sectionHeight:F0}px");
+
+            settings.AutoBrightnessMode = AutoBrightnessMode.Off;
+            flyout.RefreshAutoModeUi();
+            var backToOffHeight = flyout.ActualHeight;
+            var expectedOffHeight = onHeight - sectionHeight;
+            log.Add($"Back to Off height: {backToOffHeight:F0}px (expected {expectedOffHeight:F0}px)");
+
+            log.Add(Math.Abs(backToOffHeight - expectedOffHeight) < 1
+                ? "RESULT: PASS (shrinks back by exactly the section's height, no leftover gap)"
+                : $"RESULT: FAIL (leftover gap of {backToOffHeight - expectedOffHeight:F0}px after in-place mode toggle)");
+
             flyout.Close();
         }
         catch (Exception ex)

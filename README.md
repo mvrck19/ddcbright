@@ -17,18 +17,21 @@ flyout that matches your Windows theme and gets out of your way.
 
 ## Features
 
-- **Flyout** — click the tray icon, drag a slider per monitor, done. Scroll over the tray icon to nudge brightness without even opening it.
-- **Schedule** — dim in the evening, brighten in the morning, with an optional gradual fade instead of an instant jump.
+- **Flyout** — click the tray icon, drag a slider per monitor, done. Scroll over the tray icon (or hover it — the tooltip shows the current brightness %) to nudge brightness without even opening it. A small icon toolbar (Schedule, Ambient, link monitors, Settings) switches modes in one click, right from the flyout.
+- **Schedule** — dim in the evening, brighten in the morning, with an optional gradual fade instead of an instant jump. On a multi-monitor setup, each monitor fades from its own current brightness rather than snapping to match whichever one it reads first.
 - **Ambient** — samples your webcam every 30 seconds and estimates room brightness instead of following a fixed clock. Never dims below 10%, and Settings has a camera picker plus a one-click "Test now" to check it's actually reading your camera.
+- **Manual takes over** — drag a slider or scroll the tray icon while Schedule/Ambient is active, and it switches back to manual (Off) automatically instead of getting silently overwritten on the next tick.
 - **Native UI** — real Mica/Acrylic, matches your Windows light/dark theme and accent color, not a repainted cross-platform toolkit window.
-- **Quiet** — registers its own autostart at login on first run; no installer nagging, no background service beyond the tray icon itself.
+- **Check for Updates** — right-click the tray icon; checks GitHub Releases and offers to open the releases page if a newer version is out.
+- **Tells you when a monitor doesn't respond** — DDC/CI writes can silently fail (asleep, flaky USB-C hub); the flyout shows a small warning next to that monitor instead of pretending it worked.
+- **Quiet** — registers its own autostart at login on first run, with a Settings toggle to turn it off; no installer nagging, no background service beyond the tray icon itself.
 
 ## Install
 
-Grab an asset from [Releases](https://github.com/mvrck19/ddcbright/releases):
+Grab an asset from [Releases](https://github.com/mvrck19/ddcbright/releases) — both are named for what they are:
 
-- **Installer** — download `ddcbright-setup.exe` and run it. Adds a Start Menu shortcut and a proper Add/Remove Programs entry. No admin rights needed (installs to your user profile).
-- **Portable** — download `ddcbright.exe` and run it directly. Self-contained, nothing to install, nothing left behind but the autostart entry it registers on first run.
+- **Installer** — `ddcbright-setup-<version>.exe`. Adds a Start Menu shortcut and a proper Add/Remove Programs entry. No admin rights needed (installs to your user profile).
+- **Portable** — `ddcbright-<version>-portable.exe`. Self-contained, nothing to install, run it from anywhere. It still registers its own autostart entry on first launch (toggle it off in Settings if you don't want that) since that happens in the app itself, not the installer.
 
 ## Troubleshooting
 

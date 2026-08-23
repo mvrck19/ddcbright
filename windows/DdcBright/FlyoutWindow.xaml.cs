@@ -81,7 +81,9 @@ public partial class FlyoutWindow : FluentWindow
 
     private void Window_Deactivated(object sender, EventArgs e) => Hide();
 
-    private void RefreshAutoModeUi()
+    // internal (not private): App's --test-flyout-resize self-check exercises
+    // this directly to simulate an in-place header-icon mode toggle.
+    internal void RefreshAutoModeUi()
     {
         // Reflect the real setting on the header icons even when it was
         // changed elsewhere (Settings window) -- setting IsChecked here
@@ -93,16 +95,39 @@ public partial class FlyoutWindow : FluentWindow
         // glancing at, just clutter.
         var isOff = _settings.AutoBrightnessMode == AutoBrightnessMode.Off;
         AutoBrightnessSection.Visibility = isOff ? Visibility.Collapsed : Visibility.Visible;
-        if (isOff) return;
 
-        AutoStatusText.Text = AutoModeStatus.GetText(_settings);
-        AutoModeBadgeText.Text = _settings.AutoBrightnessMode == AutoBrightnessMode.Schedule ? "Schedule" : "Ambient";
+        if (!isOff)
+        {
+            AutoStatusText.Text = AutoModeStatus.GetText(_settings);
+            AutoModeBadgeText.Text = _settings.AutoBrightnessMode == AutoBrightnessMode.Schedule ? "Schedule" : "Ambient";
 
-        // AccentTextFillColorPrimaryBrush, not SystemAccentColorPrimaryBrush:
-        // the latter is meant for fills (buttons, toggles), not calibrated
-        // for text-on-neutral-background contrast -- it read as barely
-        // readable for the "Settings" link before this fix.
-        AutoModeBadgeText.Foreground = (Brush)FindResource("AccentTextFillColorPrimaryBrush");
+            // AccentTextFillColorPrimaryBrush, not SystemAccentColorPrimaryBrush:
+            // the latter is meant for fills (buttons, toggles), not calibrated
+            // for text-on-neutral-background contrast -- it read as barely
+            // readable for the "Settings" link before this fix.
+            AutoModeBadgeText.Foreground = (Brush)FindResource("AccentTextFillColorPrimaryBrush");
+        }
+
+        // Toggling AutoBrightnessSection's Visibility while the flyout is
+        // already open (header icon click, not a fresh ShowNearCursor) hits
+        // the same "SizeToContent stuck at a previous taller size" quirk
+        // ShowNearCursor works around -- without this, turning a mode back
+        // off left a blank gap where the status section used to be, because
+        // the HWND never shrank back down even though the content did.
+        // IsVisible guards this to only run while actually on screen (not
+        // during ShowNearCursor's own pre-Show setup, or --render-preview's
+        // headless content, which handle sizing themselves).
+        if (IsVisible)
+        {
+            Width = double.NaN;
+            Height = double.NaN;
+            InvalidateMeasure();
+            InvalidateArrange();
+            UpdateLayout();
+
+            var workArea = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Left, (int)Top)).WorkingArea;
+            Top = workArea.Bottom - ActualHeight - 8;
+        }
     }
 
     private void RebuildMonitorRows()
