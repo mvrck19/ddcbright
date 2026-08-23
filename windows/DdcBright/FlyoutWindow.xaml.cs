@@ -75,18 +75,7 @@ public partial class FlyoutWindow : FluentWindow
         Show();
         UpdateLayout();
 
-        var cursor = System.Windows.Forms.Cursor.Position;
-        var workArea = System.Windows.Forms.Screen.FromPoint(cursor).WorkingArea;
-        var width = ActualWidth;
-        var height = ActualHeight;
-
-        var x = cursor.X - width / 2;
-        var y = workArea.Bottom - height - 8;
-        x = Math.Max(workArea.Left, Math.Min(x, workArea.Right - width));
-        y = Math.Max(workArea.Top, Math.Min(y, workArea.Bottom - height));
-
-        Left = x;
-        Top = y;
+        WindowPositioning.NearCursor(this);
         Opacity = 1;
         Activate();
     }
@@ -228,7 +217,7 @@ public partial class FlyoutWindow : FluentWindow
         sliderRow.Children.Add(slider);
         sliderRow.Children.Add(brightDot);
 
-        var row = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
+        var row = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         row.Children.Add(header);
         row.Children.Add(sliderRow);
 

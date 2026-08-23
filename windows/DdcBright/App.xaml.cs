@@ -241,7 +241,16 @@ public partial class App : System.Windows.Application
         if (_settingsWindow is null || !_settingsWindow.IsLoaded)
             _settingsWindow = new SettingsWindow(_settings!);
 
+        // Same show-hidden-then-measure-then-reposition trick as
+        // FlyoutWindow.ShowNearCursor -- ActualHeight isn't known until
+        // after a real Show(), and this needs it to land next to the tray
+        // icon instead of wherever Windows would otherwise default a new
+        // window to.
+        _settingsWindow.Opacity = 0;
         _settingsWindow.Show();
+        _settingsWindow.UpdateLayout();
+        WindowPositioning.NearCursor(_settingsWindow);
+        _settingsWindow.Opacity = 1;
         _settingsWindow.Activate();
     }
 

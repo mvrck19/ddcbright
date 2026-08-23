@@ -5,7 +5,6 @@
                  Title="DDCBright Settings"
                  Width="460"
                  SizeToContent="Height"
-                 WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"

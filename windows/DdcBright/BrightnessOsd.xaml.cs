@@ -57,9 +57,7 @@ public partial class BrightnessOsd : FluentWindow
         PercentText.Text = $"{percent}%";
         UpdateLayout();
 
-        var workArea = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
-        Left = workArea.Left + (workArea.Width - ActualWidth) / 2;
-        Top = workArea.Bottom - ActualHeight - 80;
+        WindowPositioning.NearCursor(this);
 
         Opacity = 1;
         Show();
