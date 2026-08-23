@@ -5,9 +5,16 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v2.3) -- only used for manual runs, ignored on a tag push'
+        required: true
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
 
 jobs:
   build-windows:
@@ -20,7 +27,7 @@ jobs:
       - name: Publish
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
+          $version = "${{ env.RELEASE_TAG }}" -replace '^v', ''
           dotnet publish windows/DdcBright/DdcBright.csproj -c Release -r win-x64 -o publish-out -p:Version=$version
 
       - name: Install Inno Setup
@@ -29,7 +36,7 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
+          $version = "${{ env.RELEASE_TAG }}" -replace '^v', ''
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DSourceExe="$pwd\publish-out\ddcbright.exe" /DMyAppVersion="$version" packaging\windows\ddcbright.iss
 
       - name: Stage Windows release assets
@@ -56,6 +63,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ github.ref_name }}" ddcbright.exe ddcbright-setup.exe \
-            --title "${{ github.ref_name }}" --generate-notes \
+          gh release create "${{ env.RELEASE_TAG }}" ddcbright.exe ddcbright-setup.exe \
+            --title "${{ env.RELEASE_TAG }}" --generate-notes \
             --repo ${{ github.repository }}
