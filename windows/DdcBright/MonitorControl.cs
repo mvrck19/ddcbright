@@ -67,14 +67,32 @@ public static class MonitorControl
 
     public static int GetBrightness(MonitorHandle monitor)
     {
-        if (GetVCPFeatureAndVCPFeatureReply(monitor.Handle, VcpCodeBrightness, IntPtr.Zero, out var current, out _))
-            return Math.Clamp((int)current, 0, 100);
-        return 0;
+        DdcBrightEventSource.Log.GetBrightnessStart(monitor.Handle.ToInt64());
+        var result = 0;
+        try
+        {
+            if (GetVCPFeatureAndVCPFeatureReply(monitor.Handle, VcpCodeBrightness, IntPtr.Zero, out var current, out _))
+                result = Math.Clamp((int)current, 0, 100);
+            return result;
+        }
+        finally
+        {
+            DdcBrightEventSource.Log.GetBrightnessStop(result);
+        }
     }
 
     public static void SetBrightness(MonitorHandle monitor, int percent)
     {
-        SetVCPFeature(monitor.Handle, VcpCodeBrightness, (uint)Math.Clamp(percent, 0, 100));
+        var clamped = Math.Clamp(percent, 0, 100);
+        DdcBrightEventSource.Log.SetBrightnessStart(monitor.Handle.ToInt64(), clamped);
+        try
+        {
+            SetVCPFeature(monitor.Handle, VcpCodeBrightness, (uint)clamped);
+        }
+        finally
+        {
+            DdcBrightEventSource.Log.SetBrightnessStop();
+        }
     }
 
     public static void ReleaseMonitor(MonitorHandle monitor) => DestroyPhysicalMonitor(monitor.Handle);

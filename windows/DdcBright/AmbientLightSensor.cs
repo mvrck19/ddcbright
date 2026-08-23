@@ -214,28 +214,38 @@ public class AmbientLightSensor
 
     internal static unsafe int ComputeAverageLuma(SoftwareBitmap bitmap)
     {
-        using var buffer = bitmap.LockBuffer(BitmapBufferAccessMode.Read);
-        using var reference = buffer.CreateReference();
-        // A plain C# `(IMemoryBufferByteAccess)reference` cast throws
-        // InvalidCastException under CsWinRT (net8.0-windows's WinRT
-        // projection) -- the RCW is an IInspectable wrapper, not a classic
-        // COM object, so it needs CsWinRT's own QueryInterface path via
-        // WinRT.CastExtensions.As<T>() instead of a runtime-cast.
-        reference.As<IMemoryBufferByteAccess>().GetBuffer(out var data, out var capacity);
-
-        long total = 0;
-        long count = 0;
-        // Every 8th pixel is plenty for an average -- this only feeds a
-        // brightness estimate, not anything that needs per-pixel accuracy.
-        for (uint i = 0; i + 4 <= capacity; i += 4 * 8)
+        DdcBrightEventSource.Log.ComputeLumaStart(bitmap.PixelWidth, bitmap.PixelHeight);
+        var luma = 128;
+        try
         {
-            byte b = data[i];
-            byte g = data[i + 1];
-            byte r = data[i + 2];
-            total += (long)(0.299 * r + 0.587 * g + 0.114 * b);
-            count++;
+            using var buffer = bitmap.LockBuffer(BitmapBufferAccessMode.Read);
+            using var reference = buffer.CreateReference();
+            // A plain C# `(IMemoryBufferByteAccess)reference` cast throws
+            // InvalidCastException under CsWinRT (net8.0-windows's WinRT
+            // projection) -- the RCW is an IInspectable wrapper, not a classic
+            // COM object, so it needs CsWinRT's own QueryInterface path via
+            // WinRT.CastExtensions.As<T>() instead of a runtime-cast.
+            reference.As<IMemoryBufferByteAccess>().GetBuffer(out var data, out var capacity);
+
+            long total = 0;
+            long count = 0;
+            // Every 8th pixel is plenty for an average -- this only feeds a
+            // brightness estimate, not anything that needs per-pixel accuracy.
+            for (uint i = 0; i + 4 <= capacity; i += 4 * 8)
+            {
+                byte b = data[i];
+                byte g = data[i + 1];
+                byte r = data[i + 2];
+                total += (long)(0.299 * r + 0.587 * g + 0.114 * b);
+                count++;
+            }
+            luma = count == 0 ? 128 : (int)(total / count);
+            return luma;
         }
-        return count == 0 ? 128 : (int)(total / count);
+        finally
+        {
+            DdcBrightEventSource.Log.ComputeLumaStop(luma);
+        }
     }
 
     internal static int MapLumaToBrightness(int luma)

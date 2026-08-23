@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=DDCBright
-Comment=Brightness Control Application
-Exec=ddcbright
-Icon=io.github.mvrck19.ddcbright
-Terminal=false
-Categories=Utility;

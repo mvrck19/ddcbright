@@ -41,28 +41,36 @@ public class BrightnessScheduler
 
     private void Tick()
     {
-        var now = TimeOnly.FromDateTime(DateTime.Now);
-        var isDay = IsDayPeriod(now, _settings.DayTime, _settings.NightTime);
-
-        if (_lastAppliedIsDay != isDay)
+        DdcBrightEventSource.Log.SchedulerTickStart();
+        try
         {
-            _lastAppliedIsDay = isDay;
-            var target = isDay ? _settings.DayBrightness : _settings.NightBrightness;
+            var now = TimeOnly.FromDateTime(DateTime.Now);
+            var isDay = IsDayPeriod(now, _settings.DayTime, _settings.NightTime);
 
-            if (_settings.ScheduleTransition == ScheduleTransitionMode.Gradual)
-                StartFade(target);
-            else
+            if (_lastAppliedIsDay != isDay)
             {
-                // Instant: unchanged existing behavior -- apply immediately,
-                // and drop any in-progress fade left over from a prior
-                // Gradual-mode transition.
-                _fadeStartUtc = null;
-                _fadeEndUtc = null;
-                ApplyToAllMonitors(target);
-            }
-        }
+                _lastAppliedIsDay = isDay;
+                var target = isDay ? _settings.DayBrightness : _settings.NightBrightness;
 
-        AdvanceFade();
+                if (_settings.ScheduleTransition == ScheduleTransitionMode.Gradual)
+                    StartFade(target);
+                else
+                {
+                    // Instant: unchanged existing behavior -- apply immediately,
+                    // and drop any in-progress fade left over from a prior
+                    // Gradual-mode transition.
+                    _fadeStartUtc = null;
+                    _fadeEndUtc = null;
+                    ApplyToAllMonitors(target);
+                }
+            }
+
+            AdvanceFade();
+        }
+        finally
+        {
+            DdcBrightEventSource.Log.SchedulerTickStop();
+        }
     }
 
     private void StartFade(int target)

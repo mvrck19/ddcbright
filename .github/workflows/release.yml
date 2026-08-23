@@ -5,53 +5,18 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v2.3) -- only used for manual runs, ignored on a tag push'
+        required: true
 
 permissions:
   contents: write
 
+env:
+  RELEASE_TAG: ${{ github.event.inputs.version || github.ref_name }}
+
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-    continue-on-error: true # best-effort only -- must never block the Windows release
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build .deb
-        run: sh packaging/build-deb.sh
-
-      - name: Cache flatpak runtime/SDK
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/flatpak
-          key: flatpak-runtime-23.08
-
-      - name: Cache flatpak-builder sources/build cache
-        uses: actions/cache@v4
-        with:
-          path: .flatpak-builder
-          key: flatpak-builder-${{ hashFiles('packaging/flatpak/**') }}
-
-      - name: Install flatpak-builder
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08
-
-      - name: Build flatpak bundle
-        run: |
-          flatpak-builder --user --force-clean --repo=repo build-dir \
-            packaging/flatpak/io.github.mvrck19.ddcbright.yml
-          flatpak build-bundle repo ddcbright.flatpak io.github.mvrck19.ddcbright \
-            --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-packages
-          path: |
-            ddcbright.deb
-            ddcbright.flatpak
-
   build-windows:
     runs-on: windows-latest
     steps:
@@ -59,7 +24,11 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet publish windows/DdcBright/DdcBright.csproj -c Release -r win-x64 -o publish-out
+      - name: Publish
+        shell: pwsh
+        run: |
+          $version = "${{ env.RELEASE_TAG }}" -replace '^v', ''
+          dotnet publish windows/DdcBright/DdcBright.csproj -c Release -r win-x64 -o publish-out -p:Version=$version
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
@@ -67,7 +36,7 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
+          $version = "${{ env.RELEASE_TAG }}" -replace '^v', ''
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DSourceExe="$pwd\publish-out\ddcbright.exe" /DMyAppVersion="$version" packaging\windows\ddcbright.iss
 
       - name: Stage Windows release assets
@@ -83,25 +52,17 @@ jobs:
           path: dist-windows/*
 
   publish:
-    needs: [build-windows, build-linux]
-    if: always() && needs.build-windows.result == 'success'
+    needs: build-windows
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: windows-exe
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-packages
-        continue-on-error: true # ok if build-linux failed or was skipped
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          assets="ddcbright.exe ddcbright-setup.exe"
-          [ -f ddcbright.deb ] && assets="$assets ddcbright.deb"
-          [ -f ddcbright.flatpak ] && assets="$assets ddcbright.flatpak"
-          gh release create "${{ github.ref_name }}" $assets \
-            --title "${{ github.ref_name }}" --generate-notes \
+          gh release create "${{ env.RELEASE_TAG }}" ddcbright.exe ddcbright-setup.exe \
+            --title "${{ env.RELEASE_TAG }}" --generate-notes \
             --repo ${{ github.repository }}
