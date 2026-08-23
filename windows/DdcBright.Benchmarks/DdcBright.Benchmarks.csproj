@@ -5,6 +5,8 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +16,7 @@
   <ItemGroup>
     <!-- Real compile-time reference: benchmarks call internal members of
          DdcBright directly, granted via the InternalsVisibleTo in
-         DdcBright.csproj. Always built in Release (see README) --
+         DdcBright.csproj. Always built in Release (see README) —
          BenchmarkDotNet refuses to benchmark a Debug build. -->
     <ProjectReference Include="..\DdcBright\DdcBright.csproj" />
   </ItemGroup>
