@@ -1,4 +1,7 @@
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Reflection;
 using System.Windows;
 using Wpf.Ui.Appearance;
 
@@ -7,6 +10,8 @@ namespace DdcBright;
 public partial class App : System.Windows.Application
 {
     private const int TrayScrollStepPercent = 5;
+    private const string ReleasesUrl = "https://github.com/mvrck19/ddcbright/releases";
+    private static readonly HttpClient UpdateHttpClient = new();
 
     private Mutex? _singleInstanceMutex;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
@@ -128,6 +133,7 @@ public partial class App : System.Windows.Application
         var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("Settings…", null, (_, _) => ShowSettings());
         menu.Items.Add("About", null, (_, _) => ShowAbout());
+        menu.Items.Add("Check for Updates", null, async (_, _) => await CheckForUpdatesAsync());
         menu.Items.Add("Quit", null, (_, _) => Shutdown());
         _trayIcon.ContextMenuStrip = menu;
 
@@ -173,7 +179,11 @@ public partial class App : System.Windows.Application
                 var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
                 _trayBrightnessEstimate = target;
                 _osd.ShowPercent(target);
-                _trayScrollDebouncer.Trigger(() => SetAllMonitorsBrightness(target));
+                _trayScrollDebouncer.Trigger(() =>
+                {
+                    ExitAutoModeIfActive();
+                    SetAllMonitorsBrightness(target);
+                });
             });
         }
 
@@ -259,6 +269,20 @@ public partial class App : System.Windows.Application
                 _ambientSensor!.Start();
                 break;
         }
+    }
+
+    // A manual brightness change (flyout slider, tray scroll wheel) should
+    // stick instead of getting silently overwritten by the scheduler/ambient
+    // sensor on their next tick -- so it drops the mode back to Off. The
+    // no-op guard matters: callers can invoke this many times per second
+    // (slider drag, rapid scroll notches), and after the first call it's
+    // just a cheap enum comparison.
+    public void ExitAutoModeIfActive()
+    {
+        if (_settings!.AutoBrightnessMode == AutoBrightnessMode.Off) return;
+        _settings.AutoBrightnessMode = AutoBrightnessMode.Off;
+        _settings.Save();
+        ApplyAutoBrightnessMode();
     }
 
     private static void SetAllMonitorsBrightness(int value)
@@ -389,6 +413,30 @@ public partial class App : System.Windows.Application
     {
         var index = Array.IndexOf(args, flag);
         return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+    }
+
+    private static async Task CheckForUpdatesAsync()
+    {
+        var currentVersion = typeof(App).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var result = await UpdateChecker.CheckAsync(UpdateHttpClient, currentVersion);
+
+        switch (result.Status)
+        {
+            case UpdateCheckStatus.UpdateAvailable:
+                var openReleases = System.Windows.MessageBox.Show(
+                    $"v{result.LatestVersion} is available (you have v{currentVersion}).\n\nOpen the releases page?",
+                    "Update Available", MessageBoxButton.YesNo);
+                if (openReleases == MessageBoxResult.Yes)
+                    Process.Start(new ProcessStartInfo(ReleasesUrl) { UseShellExecute = true });
+                break;
+            case UpdateCheckStatus.UpToDate:
+                System.Windows.MessageBox.Show($"You're up to date (v{result.LatestVersion}).", "Check for Updates");
+                break;
+            default:
+                System.Windows.MessageBox.Show("Couldn't check for updates. Please try again later.", "Check for Updates");
+                break;
+        }
     }
 
     private static void ShowAbout()

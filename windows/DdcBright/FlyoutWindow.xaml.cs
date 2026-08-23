@@ -192,6 +192,8 @@ public partial class FlyoutWindow : FluentWindow
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
             onChanged(value);
+            ((App)System.Windows.Application.Current).ExitAutoModeIfActive();
+            RefreshAutoModeUi();
         };
 
         var brightDot = new Ellipse
