@@ -23,6 +23,7 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        CrashReporting.Initialize();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         // `ddcbright.exe --render-preview <dir>` renders the flyout/settings
@@ -203,6 +204,19 @@ public partial class App : System.Windows.Application
             // the persisted settings file.
             _settings.AutoBrightnessMode = AutoBrightnessMode.Ambient;
             ApplyAutoBrightnessMode();
+        }
+
+        // `ddcbright.exe --test-crash` deliberately throws once the message
+        // loop is pumping, to verify CrashReporting end-to-end (local
+        // crash.log + Sentry, if configured). Deferred via BeginInvoke
+        // rather than thrown synchronously here -- OnStartup runs before
+        // the Dispatcher starts pumping, so a synchronous throw would hit
+        // AppDomain.UnhandledException instead of the far more common
+        // real-world path, DispatcherUnhandledException.
+        if (e.Args.Contains("--test-crash"))
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+                throw new InvalidOperationException("Test crash via --test-crash")));
         }
     }
 
@@ -390,6 +404,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        CrashReporting.Shutdown();
         _scheduler?.Stop();
         _ambientSensor?.Stop();
         _trayScrollHook?.Dispose();
