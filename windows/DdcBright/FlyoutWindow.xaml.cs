@@ -83,6 +83,12 @@ public partial class FlyoutWindow : FluentWindow
 
     private void RefreshAutoModeUi()
     {
+        // Reflect the real setting on the header icons even when it was
+        // changed elsewhere (Settings window) -- setting IsChecked here
+        // doesn't fire Click, so no re-entrancy risk.
+        ScheduleModeToggle.IsChecked = _settings.AutoBrightnessMode == AutoBrightnessMode.Schedule;
+        AmbientModeToggle.IsChecked = _settings.AutoBrightnessMode == AutoBrightnessMode.Ambient;
+
         // Hidden entirely when Off -- an inactive row has nothing worth
         // glancing at, just clutter.
         var isOff = _settings.AutoBrightnessMode == AutoBrightnessMode.Off;
@@ -223,4 +229,18 @@ public partial class FlyoutWindow : FluentWindow
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
         => ((App)System.Windows.Application.Current).ShowSettings();
+
+    private void ScheduleModeToggle_Click(object sender, RoutedEventArgs e) => SetAutoBrightnessMode(AutoBrightnessMode.Schedule);
+    private void AmbientModeToggle_Click(object sender, RoutedEventArgs e) => SetAutoBrightnessMode(AutoBrightnessMode.Ambient);
+
+    // Clicking the already-active mode's icon turns it back off -- these two
+    // icons plus "neither pressed" cover all three AutoBrightnessMode values
+    // without a dedicated Off icon.
+    private void SetAutoBrightnessMode(AutoBrightnessMode mode)
+    {
+        _settings.AutoBrightnessMode = _settings.AutoBrightnessMode == mode ? AutoBrightnessMode.Off : mode;
+        _settings.Save();
+        ((App)System.Windows.Application.Current).ApplyAutoBrightnessMode();
+        RefreshAutoModeUi();
+    }
 }
