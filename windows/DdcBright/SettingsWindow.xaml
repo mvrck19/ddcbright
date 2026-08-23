@@ -38,6 +38,23 @@
                     </Grid>
                 </Border>
 
+                <!-- General -->
+                <TextBlock Text="General" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,24">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="Launch at startup" FontSize="13.5" />
+                            <TextBlock Text="Start DdcBright automatically when you sign in" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </StackPanel>
+                        <ToggleButton x:Name="LaunchAtStartupToggle" Grid.Column="1" Style="{StaticResource PillToggleStyle}"
+                                      VerticalAlignment="Center" Click="LaunchAtStartupToggle_Click" />
+                    </Grid>
+                </Border>
+
                 <!-- Automatic brightness -->
                 <TextBlock Text="Automatic brightness" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" />
 

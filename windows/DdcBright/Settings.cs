@@ -22,6 +22,7 @@ public class Settings
     public string? AmbientCameraId { get; set; } // null = system default camera
 
     public bool SyncMonitors { get; set; } = false;
+    public bool LaunchAtStartup { get; set; } = true;
     public ScheduleTransitionMode ScheduleTransition { get; set; } = ScheduleTransitionMode.Instant;
     public int TransitionMinutes { get; set; } = 30;
 
@@ -36,13 +37,19 @@ public class Settings
             "ddcbright",
             "settings.json");
 
-    public static Settings Load()
+    public static Settings Load() => Load(FilePath);
+
+    // Path-parameterized so unit tests can exercise load/save without going
+    // through the static, env-var-resolved-once FilePath -- DdcBright.Tests
+    // runs many tests in one process, unlike DdcBright.UiTests which
+    // launches a separate ddcbright.exe with the env var set before launch.
+    internal static Settings Load(string path)
     {
         try
         {
-            if (File.Exists(FilePath))
+            if (File.Exists(path))
             {
-                var json = File.ReadAllText(FilePath);
+                var json = File.ReadAllText(path);
                 var settings = JsonSerializer.Deserialize<Settings>(json);
                 if (settings is not null)
                     return settings;
@@ -54,13 +61,15 @@ public class Settings
         return new Settings();
     }
 
-    public void Save()
+    public void Save() => Save(FilePath);
+
+    internal void Save(string path)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(FilePath, json);
+            File.WriteAllText(path, json);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

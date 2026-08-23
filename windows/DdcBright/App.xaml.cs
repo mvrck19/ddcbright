@@ -110,10 +110,13 @@ public partial class App : System.Windows.Application
         }
         _singleInstanceMutex = mutex;
 
-        Autostart.Register();
-
         _settings = Settings.Load();
         ApplyTheme(_settings.Theme);
+
+        // Reconciled on every startup, not just when the Settings toggle is
+        // clicked -- also cleans up the Run key for anyone who had it
+        // registered under an older version (always-on) and then turns it off.
+        if (_settings.LaunchAtStartup) Autostart.Register(); else Autostart.Unregister();
 
         _scheduler = new BrightnessScheduler(_settings);
         _ambientSensor = new AmbientLightSensor(_settings);
@@ -192,7 +195,7 @@ public partial class App : System.Windows.Application
         Task.Run(() =>
         {
             var monitors = MonitorControl.GetMonitors();
-            _trayBrightnessEstimate = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) : 50;
+            _trayBrightnessEstimate = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) ?? 50 : 50;
         });
 
         // Debug affordance: `ddcbright.exe --show` opens the flyout

@@ -16,7 +16,14 @@ public class BrightnessScheduler
     // and always reaches exactly _fadeTargetBrightness at _fadeEndUtc.
     private DateTime? _fadeStartUtc;
     private DateTime? _fadeEndUtc;
-    private int _fadeStartBrightness;
+    // One start brightness per monitor (positionally matched to
+    // GetMonitors()), not a single shared value -- monitors can be at
+    // different levels when a fade begins, so each needs its own trajectory.
+    // Known limitation: if a monitor is unplugged/reordered mid-fade, the
+    // positional match can pair a monitor with the wrong start value --
+    // same limitation the old single-value code already had for applying
+    // the target, just not previously visible in the ramp itself.
+    private List<int> _fadeStartBrightnessByMonitor = [];
     private int _fadeTargetBrightness;
 
     public BrightnessScheduler(Settings settings)
@@ -76,11 +83,13 @@ public class BrightnessScheduler
     private void StartFade(int target)
     {
         var monitors = MonitorControl.GetMonitors();
-        var current = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) : target;
+        // A failed read falls back to the target itself, so that monitor
+        // simply jumps to the target on the next apply instead of fading --
+        // safer than guessing a start point we don't actually know.
+        _fadeStartBrightnessByMonitor = monitors.Select(m => MonitorControl.GetBrightness(m) ?? target).ToList();
 
         _fadeStartUtc = DateTime.UtcNow;
         _fadeEndUtc = _fadeStartUtc.Value.AddMinutes(_settings.TransitionMinutes);
-        _fadeStartBrightness = current;
         _fadeTargetBrightness = target;
     }
 
@@ -99,7 +108,12 @@ public class BrightnessScheduler
         }
 
         var t = (now - start).TotalSeconds / (end - start).TotalSeconds;
-        ApplyToAllMonitors(InterpolateBrightness(_fadeStartBrightness, _fadeTargetBrightness, t));
+        var monitors = MonitorControl.GetMonitors();
+        for (var i = 0; i < monitors.Count; i++)
+        {
+            var startBrightness = i < _fadeStartBrightnessByMonitor.Count ? _fadeStartBrightnessByMonitor[i] : _fadeTargetBrightness;
+            MonitorControl.SetBrightness(monitors[i], InterpolateBrightness(startBrightness, _fadeTargetBrightness, t));
+        }
     }
 
     /// <summary>Pure fade math, pulled out of AdvanceFade so it's testable/benchmarkable without a real timer or wall clock.</summary>

@@ -77,4 +77,10 @@ internal sealed class DdcBrightEventSource : EventSource
 
     [Event(8, Task = Tasks.ComputeLuma, Opcode = EventOpcode.Stop, Keywords = Keywords.AmbientLight)]
     public void ComputeLumaStop(int luma) => WriteEvent(8, luma);
+
+    [Event(9, Task = Tasks.SetBrightness, Opcode = EventOpcode.Info, Keywords = Keywords.MonitorControl)]
+    public void SetBrightnessFailed(long monitorHandle) => WriteEvent(9, monitorHandle);
+
+    [Event(10, Task = Tasks.GetBrightness, Opcode = EventOpcode.Info, Keywords = Keywords.MonitorControl)]
+    public void GetBrightnessFailed(long monitorHandle) => WriteEvent(10, monitorHandle);
 }

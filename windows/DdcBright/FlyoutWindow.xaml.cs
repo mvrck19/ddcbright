@@ -133,11 +133,15 @@ public partial class FlyoutWindow : FluentWindow
 
         if (_settings.SyncMonitors && _monitors.Count > 1)
         {
-            var brightness = MonitorControl.GetBrightness(_monitors[0]);
+            var brightness = MonitorControl.GetBrightness(_monitors[0]) ?? 50;
             MonitorRowsPanel.Children.Add(BuildMonitorRow("All Monitors", brightness, value =>
             {
+                // Attempt every monitor regardless of earlier failures (no
+                // short-circuiting), but still report if any of them failed.
+                var success = true;
                 foreach (var monitor in _monitors)
-                    MonitorControl.SetBrightness(monitor, value);
+                    success &= MonitorControl.SetBrightness(monitor, value);
+                return success;
             }));
             return;
         }
@@ -145,13 +149,13 @@ public partial class FlyoutWindow : FluentWindow
         foreach (var monitor in _monitors)
         {
             var name = string.IsNullOrWhiteSpace(monitor.Description) ? "Monitor" : monitor.Description;
-            var brightness = MonitorControl.GetBrightness(monitor);
+            var brightness = MonitorControl.GetBrightness(monitor) ?? 50;
             MonitorRowsPanel.Children.Add(BuildMonitorRow(name, brightness,
                 value => MonitorControl.SetBrightness(monitor, value)));
         }
     }
 
-    private FrameworkElement BuildMonitorRow(string name, int brightness, Action<int> onChanged)
+    private FrameworkElement BuildMonitorRow(string name, int brightness, Func<int, bool> onChanged)
     {
         var secondaryBrush = (Brush)FindResource("TextFillColorSecondaryBrush");
         var dotBrush = (Brush)FindResource("TextFillColorPrimaryBrush");
@@ -164,10 +168,25 @@ public partial class FlyoutWindow : FluentWindow
         Grid.SetColumn(nameLabel, 0);
 
         var percentLabel = new TextBlock { Text = $"{brightness}%", FontSize = 13, Foreground = secondaryBrush };
-        Grid.SetColumn(percentLabel, 1);
+
+        var warningIcon = new TextBlock
+        {
+            Text = "⚠",
+            FontSize = 12,
+            Margin = new Thickness(6, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = System.Windows.Media.Brushes.OrangeRed,
+            Visibility = Visibility.Collapsed,
+            ToolTip = "This monitor didn't respond to the brightness change.",
+        };
+
+        var percentPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+        Grid.SetColumn(percentPanel, 1);
+        percentPanel.Children.Add(percentLabel);
+        percentPanel.Children.Add(warningIcon);
 
         header.Children.Add(nameLabel);
-        header.Children.Add(percentLabel);
+        header.Children.Add(percentPanel);
 
         var sliderRow = new Grid();
         sliderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -191,7 +210,7 @@ public partial class FlyoutWindow : FluentWindow
         {
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
-            onChanged(value);
+            warningIcon.Visibility = onChanged(value) ? Visibility.Collapsed : Visibility.Visible;
             ((App)System.Windows.Application.Current).ExitAutoModeIfActive();
             RefreshAutoModeUi();
         };

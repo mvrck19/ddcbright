@@ -65,29 +65,39 @@ public static class MonitorControl
         return results;
     }
 
-    public static int GetBrightness(MonitorHandle monitor)
+    /// <summary>Returns null if the monitor didn't respond -- distinct from a
+    /// genuine 0% reading, which a plain int couldn't represent.</summary>
+    public static int? GetBrightness(MonitorHandle monitor)
     {
         DdcBrightEventSource.Log.GetBrightnessStart(monitor.Handle.ToInt64());
-        var result = 0;
+        int? result = null;
         try
         {
             if (GetVCPFeatureAndVCPFeatureReply(monitor.Handle, VcpCodeBrightness, IntPtr.Zero, out var current, out _))
-                result = Math.Clamp((int)current, 0, 100);
+                result = ClampPercent((int)current);
+            else
+                DdcBrightEventSource.Log.GetBrightnessFailed(monitor.Handle.ToInt64());
             return result;
         }
         finally
         {
-            DdcBrightEventSource.Log.GetBrightnessStop(result);
+            // -1 sentinel keeps this event's on-disk int arg unchanged for a
+            // failed read; GetBrightnessFailed above is what actually flags it.
+            DdcBrightEventSource.Log.GetBrightnessStop(result ?? -1);
         }
     }
 
-    public static void SetBrightness(MonitorHandle monitor, int percent)
+    /// <summary>Returns whether the monitor actually accepted the write.</summary>
+    public static bool SetBrightness(MonitorHandle monitor, int percent)
     {
-        var clamped = Math.Clamp(percent, 0, 100);
+        var clamped = ClampPercent(percent);
         DdcBrightEventSource.Log.SetBrightnessStart(monitor.Handle.ToInt64(), clamped);
         try
         {
-            SetVCPFeature(monitor.Handle, VcpCodeBrightness, (uint)clamped);
+            var success = SetVCPFeature(monitor.Handle, VcpCodeBrightness, (uint)clamped);
+            if (!success)
+                DdcBrightEventSource.Log.SetBrightnessFailed(monitor.Handle.ToInt64());
+            return success;
         }
         finally
         {
@@ -96,4 +106,6 @@ public static class MonitorControl
     }
 
     public static void ReleaseMonitor(MonitorHandle monitor) => DestroyPhysicalMonitor(monitor.Handle);
+
+    internal static int ClampPercent(int percent) => Math.Clamp(percent, 0, 100);
 }

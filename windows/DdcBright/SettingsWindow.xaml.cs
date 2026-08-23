@@ -23,6 +23,8 @@ public partial class SettingsWindow : FluentWindow
         ThemeSelector.SelectedIndex = (int)_settings.Theme;
         _suppressEvents = false;
 
+        LaunchAtStartupToggle.IsChecked = _settings.LaunchAtStartup;
+
         SegmentedControlHelper.WireExclusive(ModeButtons, i =>
         {
             _settings.AutoBrightnessMode = (AutoBrightnessMode)i;
@@ -39,6 +41,13 @@ public partial class SettingsWindow : FluentWindow
         });
 
         RefreshAutoModeUi();
+    }
+
+    private void LaunchAtStartupToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.LaunchAtStartup = LaunchAtStartupToggle.IsChecked == true;
+        _settings.Save();
+        if (_settings.LaunchAtStartup) Autostart.Register(); else Autostart.Unregister();
     }
 
     private ToggleButton[] ModeButtons => [AutoOffBtn, AutoScheduleBtn, AutoAmbientBtn];
