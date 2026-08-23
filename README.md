@@ -36,18 +36,6 @@ Grab an asset from [Releases](https://github.com/mvrck19/ddcbright/releases):
 - Ambient mode not reacting? Open Settings → Ambient → **Test now** to see exactly what the camera captured, or check `%AppData%\ddcbright\ambient.log` for a per-attempt history.
 - App crashed? Check `%AppData%\ddcbright\crash.log` — every unhandled exception is written there (and, in Release builds with Sentry configured, reported to Sentry too). See [Diagnostics](#diagnostics) below.
 
-## Linux (secondary)
-
-A separate Python/PyQt5 implementation lives in `ddcbright/`, built on [`monitorcontrol`](https://github.com/newAM/monitorcontrol) for DDC/CI. It gets less attention than the Windows app.
-
-```bash
-sudo dpkg -i ddcbright.deb && pip install monitorcontrol   # not packaged for apt
-# or
-flatpak install ddcbright.flatpak
-```
-
-Needs `i2c` group access: `sudo usermod -aG i2c $USER`, then log out and back in. macOS isn't supported (`monitorcontrol` has no macOS backend).
-
 ## Testing & performance
 
 The Windows app has three layers of automated checks, all under `windows/`:

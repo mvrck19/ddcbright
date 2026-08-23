@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DdcBright — screen brightness, actually controlled</title>
-<meta name="description" content="A native tray utility for controlling monitor brightness over DDC/CI, with scheduled and ambient-light auto-brightness. Windows and Linux." />
+<meta name="description" content="A native tray utility for controlling monitor brightness over DDC/CI, with scheduled and ambient-light auto-brightness." />
 <style>
   :root {
     /* Dark is the default palette — this is a dimming utility, most of its
@@ -353,7 +353,8 @@
   /* ---------- install ---------- */
   .install-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    max-width: 420px;
     gap: 20px;
   }
   .install-card {
@@ -434,7 +435,7 @@
 <main id="top">
   <section class="hero wrap">
     <div>
-      <p class="eyebrow">DDC/CI · tray utility · Windows &amp; Linux</p>
+      <p class="eyebrow">DDC/CI · tray utility · Windows</p>
       <h1>Screen brightness, actually controlled.</h1>
       <p class="lede">
         DdcBright talks to your monitors directly over DDC/CI — the same
@@ -444,7 +445,6 @@
       </p>
       <div class="hero-ctas">
         <a class="btn" href="https://github.com/mvrck19/ddcbright/releases">Download for Windows</a>
-        <a class="btn ghost" href="https://github.com/mvrck19/ddcbright#installation">Linux install</a>
       </div>
     </div>
 
@@ -505,15 +505,13 @@
           <div class="readout mono">05 · NATIVE</div>
           <h3>Not another Electron tray icon</h3>
           <p>Real Mica/Acrylic on Windows, matched to your accent color
-             and theme. PyQt5 on Linux. Each platform gets its own build,
-             not a shared compromise.</p>
+             and theme.</p>
         </div>
         <div class="feature">
           <div class="readout mono">06 · QUIET</div>
           <h3>Starts itself, stays out of the way</h3>
-          <p>Registers to launch at login on first run — Registry entry
-             on Windows, autostart file on Linux. Lives in the tray until
-             you need it.</p>
+          <p>Registers to launch at login on first run via a Registry
+             entry. Lives in the tray until you need it.</p>
         </div>
       </div>
     </div>
@@ -562,14 +560,6 @@
           <p class="sub">Self-contained, nothing else to install.</p>
           <pre>Download ddcbright.exe from Releases, run it.</pre>
           <p class="install-note">No DDC/CI setup needed — uses the OS's own display API.</p>
-        </div>
-        <div class="install-card">
-          <h3><span class="platform-dot"></span> Linux</h3>
-          <p class="sub">.deb or Flatpak, your choice.</p>
-          <pre>sudo dpkg -i ddcbright.deb
-pip install monitorcontrol</pre>
-          <pre>flatpak install ddcbright.flatpak</pre>
-          <p class="install-note">Needs I2C access: <code class="mono">sudo usermod -aG i2c $USER</code>, then log back in.</p>
         </div>
       </div>
     </div>
