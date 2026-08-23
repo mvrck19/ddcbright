@@ -60,6 +60,16 @@ Two always-on pieces, both in Release builds:
   ```
   then inspect the resulting `.nettrace` via `dotnet-trace convert --format speedscope` (open in speedscope.app) or PerfView.
 
+## Testing & performance
+
+The Windows app has three layers of automated checks, all under `windows/`:
+
+- `dotnet test windows/DdcBright.Tests` — unit tests for the pure logic (schedule/fade math, the debounce collapsing behavior, ambient-light brightness mapping, and the tray-scroll hook's decision logic).
+- `dotnet test windows/DdcBright.UiTests` — end-to-end tests that drive the real Settings window via FlaUI/UI Automation.
+- `dotnet run -c Release --project windows/DdcBright.Benchmarks` — [BenchmarkDotNet](https://benchmarkdotnet.org/) microbenchmarks for the hot paths, headlined by the tray-icon scroll hook's callback logic; see [`windows/DdcBright.Benchmarks/README.md`](windows/DdcBright.Benchmarks/README.md). Local/manual only — not run in CI, since statistical benchmarks need a quiet machine to mean anything.
+
+One fix worth calling out: `TrayIconScrollHook` installs a global low-level Windows mouse hook (needed to catch scroll-over-tray-icon), which Windows serializes *all* system mouse input through — if its owning thread stalls (e.g. suspended at a debugger breakpoint), the whole desktop's mouse input can stall with it. The app now skips installing that hook whenever a debugger is attached, so an edit/rebuild/relaunch cycle in Visual Studio can't trigger it.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
