@@ -6,3 +6,7 @@ windows/DdcBright/bin/
 windows/DdcBright/obj/
 windows/DdcBright.UiTests/bin/
 windows/DdcBright.UiTests/obj/
+windows/DdcBright.Tests/bin/
+windows/DdcBright.Tests/obj/
+windows/DdcBright.Benchmarks/bin/
+windows/DdcBright.Benchmarks/obj/

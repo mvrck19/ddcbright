@@ -214,7 +214,9 @@ public partial class FlyoutWindow : FluentWindow
 
         var slider = new Slider
         {
-            Minimum = 0, Maximum = 100, Value = brightness,
+            Minimum = 0,
+            Maximum = 100,
+            Value = brightness,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(slider, 0);

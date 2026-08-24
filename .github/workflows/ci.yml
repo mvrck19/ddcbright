@@ -10,6 +10,19 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - run: dotnet format windows/DdcBright.sln --verify-no-changes
+      # `dotnet list package --vulnerable` always exits 0 even when it finds
+      # something -- it's a report, not a gate -- so check its own output
+      # for the phrase it prints per vulnerable project and fail on that.
+      - name: Check for vulnerable NuGet packages
+        shell: pwsh
+        run: |
+          $output = dotnet list windows/DdcBright.sln package --vulnerable --include-transitive
+          $output | Out-Host
+          if ($output -match "has the following vulnerable packages") {
+            Write-Error "Vulnerable package(s) found -- see output above."
+            exit 1
+          }
       - run: dotnet build windows/DdcBright/DdcBright.csproj -c Debug
       - run: dotnet test windows/DdcBright.Tests/DdcBright.Tests.csproj -c Debug
       - run: dotnet test windows/DdcBright.UiTests/DdcBright.UiTests.csproj -c Debug
