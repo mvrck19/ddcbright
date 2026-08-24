@@ -61,18 +61,20 @@ public partial class FlyoutWindow : FluentWindow
         RebuildMonitorRows();
         RefreshAutoModeUi();
 
+        Opacity = 0;
+        Show();
+
         // This window is constructed once and reused for the app's whole
         // lifetime, and SizeToContent can get stuck at a previous (taller)
         // size across repeated Show()/Hide() cycles -- e.g. after showing
         // once with a longer status line or an extra monitor row, it may
-        // never shrink back down for a shorter one. Clearing Width/Height
-        // back to Auto forces a fresh remeasure against the CURRENT content
-        // instead of whatever size the HWND already had cached.
-        Width = double.NaN;
-        Height = double.NaN;
-        Opacity = 0;
-        Show();
-        UpdateLayout();
+        // never shrink back down for a shorter one. ResizeToFitContent
+        // forces a fresh remeasure against the CURRENT content instead of
+        // whatever size the HWND already had cached -- same fix
+        // RefreshAutoModeUi uses for the equivalent in-place case, since a
+        // plain Width/Height=NaN reset here turned out to still settle
+        // ~16-39px larger than the content actually needs.
+        ResizeToFitContent();
 
         WindowPositioning.NearCursor(this);
         Opacity = 1;
@@ -80,6 +82,15 @@ public partial class FlyoutWindow : FluentWindow
     }
 
     private void Window_Deactivated(object sender, EventArgs e) => Hide();
+
+    private void ResizeToFitContent()
+    {
+        Width = double.NaN;
+        Height = double.NaN;
+        InvalidateMeasure();
+        InvalidateArrange();
+        UpdateLayout();
+    }
 
     // internal (not private): App's --test-flyout-resize self-check exercises
     // this directly to simulate an in-place header-icon mode toggle.
@@ -119,11 +130,7 @@ public partial class FlyoutWindow : FluentWindow
         // headless content, which handle sizing themselves).
         if (IsVisible)
         {
-            Width = double.NaN;
-            Height = double.NaN;
-            InvalidateMeasure();
-            InvalidateArrange();
-            UpdateLayout();
+            ResizeToFitContent();
 
             var workArea = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Left, (int)Top)).WorkingArea;
             Top = workArea.Bottom - ActualHeight - 8;
