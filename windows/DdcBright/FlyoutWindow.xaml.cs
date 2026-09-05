@@ -159,7 +159,7 @@ public partial class FlyoutWindow : FluentWindow
 
         if (_settings.SyncMonitors && _monitors.Count > 1)
         {
-            var brightness = MonitorControl.GetBrightness(_monitors[0]) ?? 50;
+            var brightness = MonitorControl.TryGetLastKnownBrightness(_monitors[0].Description, out var cached) ? cached : 50;
             MonitorRowsPanel.Children.Add(BuildMonitorRow("All Monitors", brightness, value =>
             {
                 // Attempt every monitor regardless of earlier failures (no
@@ -168,20 +168,21 @@ public partial class FlyoutWindow : FluentWindow
                 foreach (var monitor in _monitors)
                     success &= MonitorControl.SetBrightness(monitor, value);
                 return success;
-            }));
+            }, () => MonitorControl.GetBrightness(_monitors[0])));
             return;
         }
 
         foreach (var monitor in _monitors)
         {
             var name = string.IsNullOrWhiteSpace(monitor.Description) ? "Monitor" : monitor.Description;
-            var brightness = MonitorControl.GetBrightness(monitor) ?? 50;
+            var brightness = MonitorControl.TryGetLastKnownBrightness(monitor.Description, out var cached) ? cached : 50;
             MonitorRowsPanel.Children.Add(BuildMonitorRow(name, brightness,
-                value => MonitorControl.SetBrightness(monitor, value)));
+                value => MonitorControl.SetBrightness(monitor, value),
+                () => MonitorControl.GetBrightness(monitor)));
         }
     }
 
-    private FrameworkElement BuildMonitorRow(string name, int brightness, Func<int, bool> onChanged)
+    private FrameworkElement BuildMonitorRow(string name, int brightness, Func<int, bool> onChanged, Func<int?> readFresh)
     {
         var secondaryBrush = (Brush)FindResource("TextFillColorSecondaryBrush");
 
@@ -220,15 +221,32 @@ public partial class FlyoutWindow : FluentWindow
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(slider, 0);
+
+        // onChanged() is a real DDC/CI hardware write (dxva2.dll -> the
+        // monitor's I2C bus), often tens to hundreds of ms. Dragging the
+        // slider fires ValueChanged on every pixel of movement, so calling
+        // it inline here blocked the UI thread and made the drag itself
+        // stutter -- the same class of problem the tray scroll wheel
+        // already solved with a trailing-edge debounce (see App.xaml.cs).
+        // Mirroring that: only the label/tray-tooltip/mode-exit UI updates
+        // happen live per tick; the actual hardware write is deferred to a
+        // thread-pool thread and collapses a fast drag into one call after
+        // it settles.
+        var writeDebouncer = new Debouncer(TimeSpan.FromMilliseconds(80));
         slider.ValueChanged += (_, e) =>
         {
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
-            warningIcon.Visibility = onChanged(value) ? Visibility.Collapsed : Visibility.Visible;
             var app = (App)System.Windows.Application.Current;
             app.ExitAutoModeIfActive();
             app.UpdateTrayTooltip(value);
             RefreshAutoModeUi();
+
+            writeDebouncer.Trigger(() =>
+            {
+                var success = onChanged(value);
+                Dispatcher.Invoke(() => warningIcon.Visibility = success ? Visibility.Collapsed : Visibility.Visible);
+            });
         };
 
         var percentPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(10, 0, 0, 0) };
@@ -238,6 +256,17 @@ public partial class FlyoutWindow : FluentWindow
 
         sliderRow.Children.Add(slider);
         sliderRow.Children.Add(percentPanel);
+
+        // The row above rendered instantly from the last known value so
+        // opening the flyout doesn't block on hardware. Confirm it against
+        // the real monitor in the background and correct the slider if it
+        // drifted (brightness changed via the monitor's own physical
+        // buttons since we last saw it, for instance).
+        Task.Run(readFresh).ContinueWith(t =>
+        {
+            if (t.Result is int fresh && fresh != (int)slider.Value)
+                Dispatcher.Invoke(() => slider.Value = fresh);
+        }, TaskScheduler.Default);
 
         var row = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         row.Children.Add(header);

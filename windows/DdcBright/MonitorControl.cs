@@ -16,6 +16,16 @@ public static class MonitorControl
 {
     private const byte VcpCodeBrightness = 0x10;
 
+    // Last brightness observed per monitor (keyed by description -- handles
+    // are re-issued on every GetMonitors() call, descriptions aren't).
+    // Lets callers like the flyout render instantly from a known-good value
+    // instead of blocking the UI thread on a fresh DDC/CI read (an I2C round
+    // trip, tens to hundreds of ms) every time they open.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> LastKnown = new();
+
+    public static bool TryGetLastKnownBrightness(string description, out int percent) =>
+        LastKnown.TryGetValue(description, out percent);
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct PhysicalMonitor
     {
@@ -74,7 +84,10 @@ public static class MonitorControl
         try
         {
             if (GetVCPFeatureAndVCPFeatureReply(monitor.Handle, VcpCodeBrightness, IntPtr.Zero, out var current, out _))
+            {
                 result = ClampPercent((int)current);
+                LastKnown[monitor.Description] = result.Value;
+            }
             else
                 DdcBrightEventSource.Log.GetBrightnessFailed(monitor.Handle.ToInt64());
             return result;
@@ -95,7 +108,9 @@ public static class MonitorControl
         try
         {
             var success = SetVCPFeature(monitor.Handle, VcpCodeBrightness, (uint)clamped);
-            if (!success)
+            if (success)
+                LastKnown[monitor.Description] = clamped;
+            else
                 DdcBrightEventSource.Log.SetBrightnessFailed(monitor.Handle.ToInt64());
             return success;
         }
