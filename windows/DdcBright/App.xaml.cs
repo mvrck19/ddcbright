@@ -18,7 +18,6 @@ public partial class App : System.Windows.Application
     private TrayIconScrollHook? _trayScrollHook;
     private readonly Debouncer _trayScrollDebouncer = new(TimeSpan.FromMilliseconds(80));
     private int? _trayBrightnessEstimate;
-    private BrightnessOsd? _osd;
     private FlyoutWindow? _flyout;
     private SettingsWindow? _settingsWindow;
     private Settings? _settings;
@@ -148,11 +147,10 @@ public partial class App : System.Windows.Application
             }
         };
 
-        _osd = new BrightnessOsd();
-
         // Scroll wheel over the tray icon adjusts every monitor's brightness
-        // directly, without opening the flyout, and shows the running
-        // percentage in a small OSD. The hook callback runs synchronously on
+        // directly, without opening the flyout. The running percentage shows
+        // in the tray tooltip -- no separate OSD popup, since that just
+        // duplicated it on screen. The hook callback runs synchronously on
         // the low-level global input pipeline -- ALL system mouse input
         // stalls while it runs, so it must never touch hardware directly.
         // Each notch only updates an in-memory target (cheap: no hardware
@@ -181,7 +179,6 @@ public partial class App : System.Windows.Application
                 if (_trayBrightnessEstimate is not { } current) return; // startup read hasn't landed yet
                 var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
                 _trayBrightnessEstimate = target;
-                _osd.ShowPercent(target);
                 UpdateTrayTooltip(target);
                 _trayScrollDebouncer.Trigger(() =>
                 {
