@@ -220,15 +220,32 @@ public partial class FlyoutWindow : FluentWindow
             VerticalAlignment = VerticalAlignment.Center,
         };
         Grid.SetColumn(slider, 0);
+
+        // onChanged() is a real DDC/CI hardware write (dxva2.dll -> the
+        // monitor's I2C bus), often tens to hundreds of ms. Dragging the
+        // slider fires ValueChanged on every pixel of movement, so calling
+        // it inline here blocked the UI thread and made the drag itself
+        // stutter -- the same class of problem the tray scroll wheel
+        // already solved with a trailing-edge debounce (see App.xaml.cs).
+        // Mirroring that: only the label/tray-tooltip/mode-exit UI updates
+        // happen live per tick; the actual hardware write is deferred to a
+        // thread-pool thread and collapses a fast drag into one call after
+        // it settles.
+        var writeDebouncer = new Debouncer(TimeSpan.FromMilliseconds(80));
         slider.ValueChanged += (_, e) =>
         {
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
-            warningIcon.Visibility = onChanged(value) ? Visibility.Collapsed : Visibility.Visible;
             var app = (App)System.Windows.Application.Current;
             app.ExitAutoModeIfActive();
             app.UpdateTrayTooltip(value);
             RefreshAutoModeUi();
+
+            writeDebouncer.Trigger(() =>
+            {
+                var success = onChanged(value);
+                Dispatcher.Invoke(() => warningIcon.Visibility = success ? Visibility.Collapsed : Visibility.Visible);
+            });
         };
 
         var percentPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(10, 0, 0, 0) };
