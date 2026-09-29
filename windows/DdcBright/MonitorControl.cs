@@ -64,10 +64,22 @@ public static class MonitorControl
     // pull the handles out from under an open flyout's sliders.
     private static readonly object MonitorsLock = new();
     private static List<MonitorHandle>? _monitors;
+    // One MonitorWorker (dedicated DDC/CI thread) per cached handle -- all
+    // hardware I/O goes through these, never straight from a caller's thread.
+    private static Dictionary<IntPtr, MonitorWorker> _workers = [];
 
     static MonitorControl()
     {
-        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => InvalidateMonitors();
+        // Re-enumerate right away (off the UI thread) on a layout change, so
+        // the next flyout open finds a warm cache instead of paying for
+        // enumeration itself. Not on resume: monitors can still be waking
+        // up then, and caching a half-empty list would stick until the next
+        // layout change -- lazy enumeration on first use is safer there.
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) =>
+        {
+            InvalidateMonitors();
+            Task.Run(GetMonitors);
+        };
         Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) =>
         {
             if (e.Mode == Microsoft.Win32.PowerModes.Resume) InvalidateMonitors();
@@ -77,24 +89,67 @@ public static class MonitorControl
     public static List<MonitorHandle> GetMonitors()
     {
         lock (MonitorsLock)
-            return [.. _monitors ??= EnumerateMonitors()];
+        {
+            if (_monitors is null)
+            {
+                _monitors = EnumerateMonitors();
+                _workers = _monitors.ToDictionary(m => m.Handle, m => new MonitorWorker(
+                    m.Description,
+                    percent => WriteBrightness(m, percent),
+                    () => ReadBrightness(m),
+                    () => DestroyPhysicalMonitor(m.Handle)));
+            }
+            return [.. _monitors];
+        }
     }
 
-    // ponytail: anything still holding the old list (an open flyout, a
-    // DDC/CI call in flight) fails like an unresponsive monitor until it
-    // re-calls GetMonitors -- the flyout does on its next open. Refcount
-    // handles if that shows up as more than a rare dropped write.
+    // Anything still holding the old list (an open flyout, a scheduler
+    // mid-fade) fails fast like an unresponsive monitor until it re-calls
+    // GetMonitors -- the flyout does on its next open. Each old handle is
+    // destroyed by its own worker once its in-flight call finishes, never
+    // out from under it.
     internal static void InvalidateMonitors()
     {
-        List<MonitorHandle>? old;
+        Dictionary<IntPtr, MonitorWorker> old;
         lock (MonitorsLock)
         {
-            old = _monitors;
+            old = _workers;
             _monitors = null;
+            _workers = [];
         }
-        foreach (var monitor in old ?? [])
-            DestroyPhysicalMonitor(monitor.Handle);
+        foreach (var worker in old.Values)
+            worker.Retire();
     }
+
+    private static MonitorWorker? WorkerFor(MonitorHandle monitor)
+    {
+        lock (MonitorsLock)
+            return _workers.GetValueOrDefault(monitor.Handle);
+    }
+
+    /// <summary>
+    /// Queues a write on the monitor's own worker thread; never blocks the
+    /// caller. Resolves to whether the monitor accepted it -- false if it
+    /// refused, didn't answer within <see cref="MonitorWorker.DefaultHangTimeout"/>,
+    /// or its handle has since been invalidated.
+    /// </summary>
+    public static Task<bool> SetBrightnessAsync(MonitorHandle monitor, int percent) =>
+        WorkerFor(monitor)?.SetBrightnessAsync(ClampPercent(percent)) ?? Task.FromResult(false);
+
+    /// <summary>Resolves to null if the monitor didn't respond -- distinct
+    /// from a genuine 0% reading, which a plain int couldn't represent.</summary>
+    public static Task<int?> GetBrightnessAsync(MonitorHandle monitor) =>
+        WorkerFor(monitor)?.GetBrightnessAsync() ?? Task.FromResult<int?>(null);
+
+    /// <summary>Writes every monitor in parallel (each on its own worker);
+    /// true only if all of them accepted it.</summary>
+    public static async Task<bool> SetBrightnessAsync(IEnumerable<MonitorHandle> monitors, int percent)
+    {
+        var results = await Task.WhenAll(monitors.Select(m => SetBrightnessAsync(m, percent))).ConfigureAwait(false);
+        return results.All(accepted => accepted);
+    }
+
+    public static Task<bool> SetAllBrightnessAsync(int percent) => SetBrightnessAsync(GetMonitors(), percent);
 
     private static List<MonitorHandle> EnumerateMonitors()
     {
@@ -118,9 +173,9 @@ public static class MonitorControl
         return results;
     }
 
-    /// <summary>Returns null if the monitor didn't respond -- distinct from a
-    /// genuine 0% reading, which a plain int couldn't represent.</summary>
-    public static int? GetBrightness(MonitorHandle monitor)
+    // Blocking hardware round trips -- only ever called on the monitor's
+    // own MonitorWorker thread.
+    private static int? ReadBrightness(MonitorHandle monitor)
     {
         using var perf = Perf.Measure("ddc.get_brightness");
         DdcBrightEventSource.Log.GetBrightnessStart(monitor.Handle.ToInt64());
@@ -144,10 +199,8 @@ public static class MonitorControl
         }
     }
 
-    /// <summary>Returns whether the monitor actually accepted the write.</summary>
-    public static bool SetBrightness(MonitorHandle monitor, int percent)
+    private static bool WriteBrightness(MonitorHandle monitor, int clamped)
     {
-        var clamped = ClampPercent(percent);
         using var perf = Perf.Measure("ddc.set_brightness");
         DdcBrightEventSource.Log.SetBrightnessStart(monitor.Handle.ToInt64(), clamped);
         try

@@ -86,8 +86,12 @@ public class BrightnessScheduler
         var monitors = MonitorControl.GetMonitors();
         // A failed read falls back to the target itself, so that monitor
         // simply jumps to the target on the next apply instead of fading --
-        // safer than guessing a start point we don't actually know.
-        _fadeStartBrightnessByMonitor = monitors.Select(m => MonitorControl.GetBrightness(m) ?? target).ToList();
+        // safer than guessing a start point we don't actually know. All
+        // monitors are read in parallel, each on its own worker; blocking
+        // here is fine (timer thread, no sync context) and keeps the whole
+        // tick inside one synchronous Perf scope.
+        var reads = Task.WhenAll(monitors.Select(MonitorControl.GetBrightnessAsync)).GetAwaiter().GetResult();
+        _fadeStartBrightnessByMonitor = reads.Select(r => r ?? target).ToList();
 
         _fadeStartUtc = DateTime.UtcNow;
         _fadeEndUtc = _fadeStartUtc.Value.AddMinutes(_settings.TransitionMinutes);
@@ -110,22 +114,20 @@ public class BrightnessScheduler
 
         var t = (now - start).TotalSeconds / (end - start).TotalSeconds;
         var monitors = MonitorControl.GetMonitors();
-        for (var i = 0; i < monitors.Count; i++)
+        var writes = monitors.Select((monitor, i) =>
         {
             var startBrightness = i < _fadeStartBrightnessByMonitor.Count ? _fadeStartBrightnessByMonitor[i] : _fadeTargetBrightness;
-            MonitorControl.SetBrightness(monitors[i], InterpolateBrightness(startBrightness, _fadeTargetBrightness, t));
-        }
+            return MonitorControl.SetBrightnessAsync(monitor, InterpolateBrightness(startBrightness, _fadeTargetBrightness, t));
+        });
+        Task.WhenAll(writes).GetAwaiter().GetResult();
     }
 
     /// <summary>Pure fade math, pulled out of AdvanceFade so it's testable/benchmarkable without a real timer or wall clock.</summary>
     internal static int InterpolateBrightness(int start, int target, double t) =>
         (int)Math.Round(start + (target - start) * t);
 
-    private static void ApplyToAllMonitors(int brightness)
-    {
-        foreach (var monitor in MonitorControl.GetMonitors())
-            MonitorControl.SetBrightness(monitor, brightness);
-    }
+    private static void ApplyToAllMonitors(int brightness) =>
+        MonitorControl.SetAllBrightnessAsync(brightness).GetAwaiter().GetResult();
 
     internal static bool IsDayPeriod(TimeOnly now, TimeOnly dayStart, TimeOnly nightStart)
     {

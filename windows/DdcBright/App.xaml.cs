@@ -190,10 +190,10 @@ public partial class App : System.Windows.Application
 
         // Seed the estimate once, off the UI thread, so the very first
         // hook invocation above doesn't have to block on a DDC/CI read.
-        Task.Run(() =>
+        Task.Run(async () =>
         {
             var monitors = MonitorControl.GetMonitors();
-            var estimate = monitors.Count > 0 ? MonitorControl.GetBrightness(monitors[0]) ?? 50 : 50;
+            var estimate = monitors.Count > 0 ? await MonitorControl.GetBrightnessAsync(monitors[0]) ?? 50 : 50;
             _trayBrightnessEstimate = estimate;
             UpdateTrayTooltip(estimate);
         });
@@ -302,11 +302,9 @@ public partial class App : System.Windows.Application
     // already visible from the icon itself being in the tray.
     internal void UpdateTrayTooltip(int percent) => _trayIcon!.Text = $"{percent}%";
 
-    private static void SetAllMonitorsBrightness(int value)
-    {
-        foreach (var monitor in MonitorControl.GetMonitors())
-            MonitorControl.SetBrightness(monitor, value);
-    }
+    // Fire-and-forget: queued on every monitor's worker in parallel, and
+    // never throws (a failed write just resolves false).
+    private static void SetAllMonitorsBrightness(int value) => _ = MonitorControl.SetAllBrightnessAsync(value);
 
     private static void TestFlyoutResize()
     {

@@ -95,8 +95,7 @@ public class AmbientLightSensor
             }
 
             _lastAppliedBrightness = brightness;
-            foreach (var monitor in MonitorControl.GetMonitors())
-                MonitorControl.SetBrightness(monitor, brightness);
+            await MonitorControl.SetAllBrightnessAsync(brightness);
             Log($"tick  smoothed={_smoothedLuma:F0} brightness={brightness}% APPLIED");
         }
         finally
