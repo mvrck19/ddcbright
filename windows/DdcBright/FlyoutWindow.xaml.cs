@@ -240,8 +240,17 @@ public partial class FlyoutWindow : FluentWindow
         // thread-pool thread and collapses a fast drag into one call after
         // it settles.
         var writeDebouncer = new Debouncer(TimeSpan.FromMilliseconds(80));
+        var syncingFromHardware = false;
         slider.ValueChanged += (_, e) =>
         {
+            // A fresh hardware read correcting the slider (below) isn't a
+            // user change: update the label only, don't exit auto mode or
+            // write the value straight back to the monitor.
+            if (syncingFromHardware)
+            {
+                percentLabel.Text = $"{(int)e.NewValue}%";
+                return;
+            }
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
             var app = (App)System.Windows.Application.Current;
@@ -271,8 +280,16 @@ public partial class FlyoutWindow : FluentWindow
         // buttons since we last saw it, for instance).
         Task.Run(readFresh).ContinueWith(t =>
         {
-            if (t.Result is int fresh && fresh != (int)slider.Value)
-                Dispatcher.Invoke(() => slider.Value = fresh);
+            // slider.Value is UI-thread-only -- the compare has to happen
+            // inside the dispatcher call, not here on the thread pool.
+            if (t.Result is int fresh)
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (fresh == (int)slider.Value) return;
+                    syncingFromHardware = true;
+                    slider.Value = fresh;
+                    syncingFromHardware = false;
+                });
         }, TaskScheduler.Default);
 
         var row = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
