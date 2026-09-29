@@ -48,6 +48,7 @@ public class BrightnessScheduler
 
     private void Tick()
     {
+        using var perf = Perf.Measure("scheduler.tick");
         DdcBrightEventSource.Log.SchedulerTickStart();
         try
         {

@@ -16,4 +16,17 @@ public class MonitorControlTests
     {
         Assert.Equal(expected, MonitorControl.ClampPercent(input));
     }
+
+    // Guards the handle-leak fix: repeated calls must reuse the cached
+    // physical-monitor handles, and only invalidation opens fresh ones.
+    // (Trivially passes with no DDC/CI monitors attached, e.g. on CI.)
+    [Fact]
+    public void GetMonitors_ReusesHandlesUntilInvalidated()
+    {
+        var first = MonitorControl.GetMonitors();
+        Assert.Equal(first, MonitorControl.GetMonitors());
+
+        MonitorControl.InvalidateMonitors();
+        Assert.Equal(first.Count, MonitorControl.GetMonitors().Count);
+    }
 }

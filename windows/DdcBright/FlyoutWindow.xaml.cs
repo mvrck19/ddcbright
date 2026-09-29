@@ -35,6 +35,7 @@ public partial class FlyoutWindow : FluentWindow
 
     public void ShowNearCursor()
     {
+        using var perf = Perf.Measure("flyout.open");
         // FluentWindow's chrome/backdrop setup only finalizes once the HWND
         // exists (on Show()), so a pre-Show Measure/Arrange under-reports
         // the real size. Show hidden, measure the real ActualWidth/Height,
@@ -54,15 +55,20 @@ public partial class FlyoutWindow : FluentWindow
         // since it's a real native/DWM call, not free to redo every open.
         if (_settings.Theme != _lastAppliedTheme)
         {
+            using var _ = Perf.Measure("flyout.apply_theme");
             ApplicationThemeManager.Apply(this);
             WindowBackgroundManager.UpdateBackground(this, ApplicationThemeManager.GetAppTheme(), WindowBackdropType.Mica);
             _lastAppliedTheme = _settings.Theme;
         }
-        RebuildMonitorRows();
-        RefreshAutoModeUi();
+        using (Perf.Measure("flyout.build_content"))
+        {
+            RebuildMonitorRows();
+            RefreshAutoModeUi();
+        }
 
         Opacity = 0;
-        Show();
+        using (Perf.Measure("flyout.show"))
+            Show();
 
         // This window is constructed once and reused for the app's whole
         // lifetime, and SizeToContent can get stuck at a previous (taller)
@@ -74,7 +80,8 @@ public partial class FlyoutWindow : FluentWindow
         // RefreshAutoModeUi uses for the equivalent in-place case, since a
         // plain Width/Height=NaN reset here turned out to still settle
         // ~16-39px larger than the content actually needs.
-        ResizeToFitContent();
+        using (Perf.Measure("flyout.layout"))
+            ResizeToFitContent();
 
         WindowPositioning.NearCursor(this);
         Opacity = 1;
@@ -233,8 +240,17 @@ public partial class FlyoutWindow : FluentWindow
         // thread-pool thread and collapses a fast drag into one call after
         // it settles.
         var writeDebouncer = new Debouncer(TimeSpan.FromMilliseconds(80));
+        var syncingFromHardware = false;
         slider.ValueChanged += (_, e) =>
         {
+            // A fresh hardware read correcting the slider (below) isn't a
+            // user change: update the label only, don't exit auto mode or
+            // write the value straight back to the monitor.
+            if (syncingFromHardware)
+            {
+                percentLabel.Text = $"{(int)e.NewValue}%";
+                return;
+            }
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
             var app = (App)System.Windows.Application.Current;
@@ -264,8 +280,16 @@ public partial class FlyoutWindow : FluentWindow
         // buttons since we last saw it, for instance).
         Task.Run(readFresh).ContinueWith(t =>
         {
-            if (t.Result is int fresh && fresh != (int)slider.Value)
-                Dispatcher.Invoke(() => slider.Value = fresh);
+            // slider.Value is UI-thread-only -- the compare has to happen
+            // inside the dispatcher call, not here on the thread pool.
+            if (t.Result is int fresh)
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (fresh == (int)slider.Value) return;
+                    syncingFromHardware = true;
+                    slider.Value = fresh;
+                    syncingFromHardware = false;
+                });
         }, TaskScheduler.Default);
 
         var row = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };

@@ -54,8 +54,51 @@ public static class MonitorControl
     [DllImport("dxva2.dll")]
     private static extern bool SetVCPFeature(IntPtr hMonitor, byte bVCPCode, uint dwNewValue);
 
+    // Physical monitor handles are real OS resources that must be released
+    // with DestroyPhysicalMonitor -- enumerating fresh ones on every flyout
+    // open / scheduler tick (as this used to) leaked a set each time. So
+    // enumerate once and hand out the cached set until the display layout
+    // changes (hotplug, resolution, arrangement) or the machine resumes
+    // from sleep, then release and re-enumerate. Deliberately NOT on a
+    // failed DDC/CI call: those are often transient, and invalidating would
+    // pull the handles out from under an open flyout's sliders.
+    private static readonly object MonitorsLock = new();
+    private static List<MonitorHandle>? _monitors;
+
+    static MonitorControl()
+    {
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += (_, _) => InvalidateMonitors();
+        Microsoft.Win32.SystemEvents.PowerModeChanged += (_, e) =>
+        {
+            if (e.Mode == Microsoft.Win32.PowerModes.Resume) InvalidateMonitors();
+        };
+    }
+
     public static List<MonitorHandle> GetMonitors()
     {
+        lock (MonitorsLock)
+            return [.. _monitors ??= EnumerateMonitors()];
+    }
+
+    // ponytail: anything still holding the old list (an open flyout, a
+    // DDC/CI call in flight) fails like an unresponsive monitor until it
+    // re-calls GetMonitors -- the flyout does on its next open. Refcount
+    // handles if that shows up as more than a rare dropped write.
+    internal static void InvalidateMonitors()
+    {
+        List<MonitorHandle>? old;
+        lock (MonitorsLock)
+        {
+            old = _monitors;
+            _monitors = null;
+        }
+        foreach (var monitor in old ?? [])
+            DestroyPhysicalMonitor(monitor.Handle);
+    }
+
+    private static List<MonitorHandle> EnumerateMonitors()
+    {
+        using var _ = Perf.Measure("ddc.get_monitors");
         var results = new List<MonitorHandle>();
 
         EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (hMonitor, _, _, _) =>
@@ -79,6 +122,7 @@ public static class MonitorControl
     /// genuine 0% reading, which a plain int couldn't represent.</summary>
     public static int? GetBrightness(MonitorHandle monitor)
     {
+        using var perf = Perf.Measure("ddc.get_brightness");
         DdcBrightEventSource.Log.GetBrightnessStart(monitor.Handle.ToInt64());
         int? result = null;
         try
@@ -104,6 +148,7 @@ public static class MonitorControl
     public static bool SetBrightness(MonitorHandle monitor, int percent)
     {
         var clamped = ClampPercent(percent);
+        using var perf = Perf.Measure("ddc.set_brightness");
         DdcBrightEventSource.Log.SetBrightnessStart(monitor.Handle.ToInt64(), clamped);
         try
         {
@@ -119,8 +164,6 @@ public static class MonitorControl
             DdcBrightEventSource.Log.SetBrightnessStop();
         }
     }
-
-    public static void ReleaseMonitor(MonitorHandle monitor) => DestroyPhysicalMonitor(monitor.Handle);
 
     internal static int ClampPercent(int percent) => Math.Clamp(percent, 0, 100);
 }
