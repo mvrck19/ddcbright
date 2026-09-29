@@ -56,6 +56,7 @@ public static class MonitorControl
 
     public static List<MonitorHandle> GetMonitors()
     {
+        using var _ = Perf.Measure("ddc.get_monitors");
         var results = new List<MonitorHandle>();
 
         EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (hMonitor, _, _, _) =>
@@ -79,6 +80,7 @@ public static class MonitorControl
     /// genuine 0% reading, which a plain int couldn't represent.</summary>
     public static int? GetBrightness(MonitorHandle monitor)
     {
+        using var perf = Perf.Measure("ddc.get_brightness");
         DdcBrightEventSource.Log.GetBrightnessStart(monitor.Handle.ToInt64());
         int? result = null;
         try
@@ -104,6 +106,7 @@ public static class MonitorControl
     public static bool SetBrightness(MonitorHandle monitor, int percent)
     {
         var clamped = ClampPercent(percent);
+        using var perf = Perf.Measure("ddc.set_brightness");
         DdcBrightEventSource.Log.SetBrightnessStart(monitor.Handle.ToInt64(), clamped);
         try
         {

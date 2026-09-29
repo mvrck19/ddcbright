@@ -18,16 +18,13 @@ internal static class CrashReporting
 
     // Sentry DSNs are write-only ingest identifiers, not secrets -- Sentry's
     // own docs say they're safe to embed directly in client/desktop apps.
-    // Empty here on purpose: create a Sentry project (sentry.io, free
-    // Developer tier) and paste its DSN in before shipping a Release build,
-    // otherwise Sentry reporting is silently skipped (the local crash.log
-    // still works either way).
-    private const string Dsn = "";
+    // Project: nothing-xi/ddcbright (EU region). Blank it to make Sentry
+    // reporting local-only (crash.log/perf.log still work either way).
+    private const string Dsn = "https://3880d7f0c8582d3bf666a1af4cf29100@o4512168525037568.ingest.de.sentry.io/4512168558723152";
 
-    private static readonly string LogPath = Path.Combine(
+    private static readonly string LogDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ddcbright",
-        "crash.log");
+        "ddcbright");
 
     public static void Initialize()
     {
@@ -75,11 +72,12 @@ internal static class CrashReporting
             // A brightness-control utility has no legitimate need for PII
             // in breadcrumbs/events.
             options.SendDefaultPii = false;
-            // Performance data goes through DdcBrightEventSource/ETW
-            // instead (see DdcBrightEventSource.cs) -- enabling Sentry's
-            // own tracing here would be a second, redundant instrumentation
-            // system (and eats into the free tier's event quota).
-            options.TracesSampleRate = 0;
+            // Only the hand-placed Perf.Measure spans (flyout open, DDC/CI
+            // reads/writes, scheduler ticks) produce transactions -- there's
+            // no auto-instrumentation in a plain WPF app -- so sampling
+            // everything is cheap for a single-user tray app, and a sampled-
+            // out slow flyout open is exactly the one you'd want to see.
+            options.TracesSampleRate = 1.0;
             // This is a laptop-class tray app that can be asleep/offline
             // when it crashes -- queue undelivered events on disk instead
             // of dropping them.
@@ -99,17 +97,21 @@ internal static class CrashReporting
     private static void ReportFatal(Exception ex, string source)
     {
         SentrySdk.CaptureException(ex);
-        WriteLocalLog(source, ex);
+        AppendLog("crash.log", FormatLogLine(DateTime.Now, source, ex));
     }
 
-    private static void WriteLocalLog(string source, Exception ex)
+    // ponytail: File.AppendAllText with no lock -- concurrent writers
+    // (UI thread + thread-pool Perf scopes) can rarely interleave or hit a
+    // sharing IOException, which is swallowed. Add a lock if lines go missing.
+    internal static void AppendLog(string fileName, string line)
     {
+        var path = Path.Combine(LogDir, fileName);
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-            if (File.Exists(LogPath) && ShouldRotate(new FileInfo(LogPath).Length, MaxLogBytes))
-                File.Delete(LogPath); // ponytail: simple restart-on-overflow, no rotation (matches ambient.log)
-            File.AppendAllText(LogPath, FormatLogLine(DateTime.Now, source, ex));
+            Directory.CreateDirectory(LogDir);
+            if (File.Exists(path) && ShouldRotate(new FileInfo(path).Length, MaxLogBytes))
+                File.Delete(path); // ponytail: simple restart-on-overflow, no rotation (matches ambient.log)
+            File.AppendAllText(path, line);
         }
         catch (Exception logEx) when (logEx is IOException or UnauthorizedAccessException)
         {

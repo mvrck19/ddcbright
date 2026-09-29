@@ -53,7 +53,8 @@ One fix worth calling out: `TrayIconScrollHook` installs a global low-level Wind
 
 Two always-on pieces, both in Release builds:
 
-- **Crash reporting** (`CrashReporting.cs`) — every unhandled exception (WPF UI thread, AppDomain, or an unobserved `Task`) is written to `%AppData%\ddcbright\crash.log` and, if a Sentry DSN is configured, reported to [Sentry](https://sentry.io) (free Developer tier — 5K events/month is far more than a single-user desktop app needs). To enable Sentry, create a project at sentry.io and paste its DSN into the `Dsn` constant in `CrashReporting.cs`; leave it blank to keep crash reporting local-only. Either way, set `DDCBRIGHT_DISABLE_SENTRY` (any value) to opt out of Sentry specifically while keeping the local log.
+- **Crash reporting** (`CrashReporting.cs`) — every unhandled exception (WPF UI thread, AppDomain, or an unobserved `Task`) is written to `%AppData%\ddcbright\crash.log` and, in Release builds, reported to [Sentry](https://sentry.io) (DSN in the `Dsn` constant in `CrashReporting.cs`; blank it to keep crash reporting local-only). Set `DDCBRIGHT_DISABLE_SENTRY` (any value) to opt out of Sentry while keeping the local logs.
+- **Latency tracing** (`Perf.cs`) — `Perf.Measure("...")` scopes around the flyout open (split into theme/content/show/layout), DDC/CI `get_monitors`/`get_brightness`/`set_brightness`, and the scheduler tick. Each is a Sentry transaction/span (Release builds), and anything over 200ms is also appended to `%AppData%\ddcbright\perf.log`.
 - **Performance data** (`DdcBrightEventSource.cs`) — an ETW provider named `DdcBright`, with Start/Stop events around the hot paths that matter most for a DDC/CI app: the hardware brightness get/set calls, the schedule-fade tick, and ambient-light luma computation. Near-zero cost when nothing's listening; capture it with:
   ```powershell
   dotnet-trace collect --process-id <pid> --providers DdcBright

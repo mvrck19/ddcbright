@@ -35,6 +35,7 @@ public partial class FlyoutWindow : FluentWindow
 
     public void ShowNearCursor()
     {
+        using var perf = Perf.Measure("flyout.open");
         // FluentWindow's chrome/backdrop setup only finalizes once the HWND
         // exists (on Show()), so a pre-Show Measure/Arrange under-reports
         // the real size. Show hidden, measure the real ActualWidth/Height,
@@ -54,15 +55,20 @@ public partial class FlyoutWindow : FluentWindow
         // since it's a real native/DWM call, not free to redo every open.
         if (_settings.Theme != _lastAppliedTheme)
         {
+            using var _ = Perf.Measure("flyout.apply_theme");
             ApplicationThemeManager.Apply(this);
             WindowBackgroundManager.UpdateBackground(this, ApplicationThemeManager.GetAppTheme(), WindowBackdropType.Mica);
             _lastAppliedTheme = _settings.Theme;
         }
-        RebuildMonitorRows();
-        RefreshAutoModeUi();
+        using (Perf.Measure("flyout.build_content"))
+        {
+            RebuildMonitorRows();
+            RefreshAutoModeUi();
+        }
 
         Opacity = 0;
-        Show();
+        using (Perf.Measure("flyout.show"))
+            Show();
 
         // This window is constructed once and reused for the app's whole
         // lifetime, and SizeToContent can get stuck at a previous (taller)
@@ -74,7 +80,8 @@ public partial class FlyoutWindow : FluentWindow
         // RefreshAutoModeUi uses for the equivalent in-place case, since a
         // plain Width/Height=NaN reset here turned out to still settle
         // ~16-39px larger than the content actually needs.
-        ResizeToFitContent();
+        using (Perf.Measure("flyout.layout"))
+            ResizeToFitContent();
 
         WindowPositioning.NearCursor(this);
         Opacity = 1;
