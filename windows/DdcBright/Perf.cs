@@ -1,47 +1,38 @@
 using System.Diagnostics;
-using Sentry;
 
 namespace DdcBright;
 
 /// <summary>
-/// Times one operation as a Sentry span (a transaction when nothing on this
-/// thread is already being timed, a child span otherwise) and appends a line
-/// to %APPDATA%\ddcbright\perf.log when it took longer than
-/// <see cref="SlowThresholdMs"/> -- so slow flyout opens / DDC/CI calls are
-/// visible locally even without Sentry. Usage: <c>using var _ = Perf.Measure("flyout.open");</c>
+/// Times one operation and appends it to %APPDATA%\ddcbright\perf.log --
+/// always when <c>logAlways</c> is set (the flyout open and its phases, so
+/// typical-vs-slow distributions can be read straight off the file), and
+/// otherwise only when it took longer than <see cref="SlowThresholdMs"/>
+/// (DDC/CI calls and scheduler ticks run too often to log every one).
+/// Usage: <c>using var _ = Perf.Measure("flyout.open", logAlways: true);</c>
 /// </summary>
 internal sealed class Perf : IDisposable
 {
     internal const int SlowThresholdMs = 200;
 
-    // ponytail: [ThreadStatic] nesting only covers synchronous call chains --
-    // work handed off to Task.Run starts its own transaction. Fine for this
-    // app (no async/await on the hot paths); switch to AsyncLocal if that changes.
-    [ThreadStatic] private static Perf? _current;
-
-    private readonly Perf? _parent;
-    private readonly ISpan _span;
+    private readonly string _operation;
+    private readonly bool _logAlways;
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
-    private Perf(string operation)
+    private Perf(string operation, bool logAlways)
     {
-        _parent = _current;
-        _span = _parent is null
-            ? SentrySdk.StartTransaction(operation, operation)
-            : _parent._span.StartChild(operation);
-        _current = this;
+        _operation = operation;
+        _logAlways = logAlways;
     }
 
-    public static Perf Measure(string operation) => new(operation);
+    public static Perf Measure(string operation, bool logAlways = false) => new(operation, logAlways);
 
     public void Dispose()
     {
-        _current = _parent;
-        _span.Finish();
-        if (_stopwatch.ElapsedMilliseconds > SlowThresholdMs)
-            CrashReporting.AppendLog("perf.log", FormatLogLine(DateTime.Now, _span.Operation, _stopwatch.ElapsedMilliseconds));
+        var elapsedMs = _stopwatch.ElapsedMilliseconds;
+        if (_logAlways || elapsedMs > SlowThresholdMs)
+            CrashReporting.AppendLog("perf.log", FormatLogLine(DateTime.Now, _operation, elapsedMs));
     }
 
     internal static string FormatLogLine(DateTime timestamp, string operation, long elapsedMs) =>
-        $"{timestamp:yyyy-MM-dd HH:mm:ss}  SLOW  {operation}  {elapsedMs}ms{Environment.NewLine}";
+        $"{timestamp:yyyy-MM-dd HH:mm:ss.fff}  {operation}  {elapsedMs}ms{(elapsedMs > SlowThresholdMs ? "  SLOW" : "")}{Environment.NewLine}";
 }

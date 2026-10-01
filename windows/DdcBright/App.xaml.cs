@@ -221,7 +221,7 @@ public partial class App : System.Windows.Application
 
         // `ddcbright.exe --test-crash` deliberately throws once the message
         // loop is pumping, to verify CrashReporting end-to-end (local
-        // crash.log + Sentry, if configured). Deferred via BeginInvoke
+        // crash.log). Deferred via BeginInvoke
         // rather than thrown synchronously here -- OnStartup runs before
         // the Dispatcher starts pumping, so a synchronous throw would hit
         // AppDomain.UnhandledException instead of the far more common
@@ -495,7 +495,6 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        CrashReporting.Shutdown();
         _scheduler?.Stop();
         _ambientSensor?.Stop();
         _trayScrollHook?.Dispose();
