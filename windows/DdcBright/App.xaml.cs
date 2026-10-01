@@ -17,6 +17,7 @@ public partial class App : System.Windows.Application
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private TrayIconScrollHook? _trayScrollHook;
     private readonly Debouncer _trayScrollDebouncer = new(TimeSpan.FromMilliseconds(80));
+    private readonly Debouncer _calibrationSaveDebouncer = new(TimeSpan.FromMilliseconds(500));
     private int? _trayBrightnessEstimate;
     private FlyoutWindow? _flyout;
     private SettingsWindow? _settingsWindow;
@@ -190,7 +191,7 @@ public partial class App : System.Windows.Application
                 UpdateTrayTooltip(target);
                 _trayScrollDebouncer.Trigger(() =>
                 {
-                    ExitAutoModeIfActive();
+                    OnManualBrightnessChange(target);
                     SetAllMonitorsBrightness(target);
                 });
             }));
@@ -291,13 +292,24 @@ public partial class App : System.Windows.Application
         }
     }
 
-    // A manual brightness change (flyout slider, tray scroll wheel) should
-    // stick instead of getting silently overwritten by the scheduler/ambient
-    // sensor on their next tick -- so it drops the mode back to Off. The
-    // no-op guard matters: callers can invoke this many times per second
-    // (slider drag, rapid scroll notches), and after the first call it's
-    // just a cheap enum comparison.
-    public void ExitAutoModeIfActive()
+    // A manual brightness change (flyout slider, tray scroll wheel). In
+    // Ambient mode it's a correction: the sensor learns "at this room light,
+    // I want this" and Ambient keeps running. Otherwise it should stick
+    // instead of getting silently overwritten by the scheduler's next tick,
+    // so the mode drops back to Off. Callers can invoke this many times per
+    // second (slider drag, rapid scroll notches): learning is in-memory and
+    // the save is debounced; exiting is a no-op after the first call.
+    public void OnManualBrightnessChange(int percent)
+    {
+        if (_settings!.AutoBrightnessMode == AutoBrightnessMode.Ambient && _ambientSensor!.Calibrate(percent))
+        {
+            _calibrationSaveDebouncer.Trigger(_settings.Save);
+            return;
+        }
+        ExitAutoModeIfActive();
+    }
+
+    private void ExitAutoModeIfActive()
     {
         if (_settings!.AutoBrightnessMode == AutoBrightnessMode.Off) return;
         _settings.AutoBrightnessMode = AutoBrightnessMode.Off;

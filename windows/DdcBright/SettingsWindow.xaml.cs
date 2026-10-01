@@ -132,6 +132,13 @@ public partial class SettingsWindow : FluentWindow
         AmbientTestButton.IsEnabled = true;
     }
 
+    private void AmbientResetButton_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.AmbientCalibration = [];
+        _settings.Save();
+        RefreshScheduleFields();
+    }
+
     private void RefreshScheduleFields()
     {
         DayTimeLabel.Text = _settings.DayTime.ToString("h:mm tt");
@@ -140,6 +147,12 @@ public partial class SettingsWindow : FluentWindow
         NightBrightnessLabel.Text = $"{_settings.NightBrightness}%";
         TransitionMinutesLabel.Text = $"{_settings.TransitionMinutes} min";
         AutoModeStatusText.Text = AutoModeStatus.GetText(_settings);
+
+        var learned = _settings.AmbientCalibration.Count;
+        AmbientCalibrationText.Text = learned == 0
+            ? "No adjustments learned yet."
+            : $"Learned from {learned} adjustment{(learned == 1 ? "" : "s")}.";
+        AmbientResetButton.IsEnabled = learned > 0;
     }
 
     private void DayTimeDown_Click(object sender, RoutedEventArgs e) => AdjustDayTime(-15);

@@ -20,6 +20,7 @@ public class Settings
     public int NightBrightness { get; set; } = 30;
 
     public string? AmbientCameraId { get; set; } // null = system default camera
+    public List<AmbientCalibrationPoint> AmbientCalibration { get; set; } = [];
 
     public bool SyncMonitors { get; set; } = false;
     public bool LaunchAtStartup { get; set; } = true;
