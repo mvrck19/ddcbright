@@ -88,7 +88,20 @@ internal sealed class TrayIconScrollHook : IDisposable
             ?? throw new InvalidOperationException("NotifyIcon._id field not found.");
         _iconId = (uint)idField.GetValue(icon)!;
 
-        _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _proc, IntPtr.Zero, 0);
+        // Own thread, not the caller's UI thread: Windows makes every
+        // system-wide mouse event wait (~300ms timeout each) on whichever
+        // thread owns a WH_MOUSE_LL hook, so any UI-thread stall -- e.g. a
+        // slow first flyout open -- froze the mouse across the whole desktop.
+        // onScroll therefore runs on this thread too; callers marshal.
+        using var installed = new ManualResetEventSlim();
+        new Thread(() =>
+        {
+            _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _proc, IntPtr.Zero, 0);
+            installed.Set();
+            Application.Run(); // ponytail: never exits -- background thread, dies with the process
+        })
+        { IsBackground = true, Name = "TrayIconScrollHook" }.Start();
+        installed.Wait();
     }
 
     private IntPtr HookCallback(int code, IntPtr wParam, IntPtr lParam)

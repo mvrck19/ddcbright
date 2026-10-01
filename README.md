@@ -37,7 +37,7 @@ Grab an asset from [Releases](https://github.com/mvrck19/ddcbright/releases) —
 
 - Make sure your monitor supports DDC/CI and it's enabled in the monitor's OSD menu — DDC/CI access uses the OS's own display API, no extra setup needed on Windows.
 - Ambient mode not reacting? Open Settings → Ambient → **Test now** to see exactly what the camera captured, or check `%AppData%\ddcbright\ambient.log` for a per-attempt history.
-- App crashed? Check `%AppData%\ddcbright\crash.log` — every unhandled exception is written there (and, in Release builds with Sentry configured, reported to Sentry too). See [Diagnostics](#diagnostics) below.
+- App crashed? Check `%AppData%\ddcbright\crash.log` — every unhandled exception is written there. See [Diagnostics](#diagnostics) below.
 
 ## Testing & performance
 
@@ -53,8 +53,8 @@ One fix worth calling out: `TrayIconScrollHook` installs a global low-level Wind
 
 Two always-on pieces, both in Release builds:
 
-- **Crash reporting** (`CrashReporting.cs`) — every unhandled exception (WPF UI thread, AppDomain, or an unobserved `Task`) is written to `%AppData%\ddcbright\crash.log` and, in Release builds, reported to [Sentry](https://sentry.io) (DSN in the `Dsn` constant in `CrashReporting.cs`; blank it to keep crash reporting local-only). Set `DDCBRIGHT_DISABLE_SENTRY` (any value) to opt out of Sentry while keeping the local logs.
-- **Latency tracing** (`Perf.cs`) — `Perf.Measure("...")` scopes around the flyout open (split into theme/content/show/layout), DDC/CI `get_monitors`/`get_brightness`/`set_brightness`, and the scheduler tick. Each is a Sentry transaction/span (Release builds), and anything over 200ms is also appended to `%AppData%\ddcbright\perf.log`.
+- **Crash reporting** (`CrashReporting.cs`) — every unhandled exception (WPF UI thread, AppDomain, or an unobserved `Task`) is written to `%AppData%\ddcbright\crash.log`. Nothing is sent off the machine.
+- **Latency log** (`Perf.cs`) — `Perf.Measure("...")` scopes write to `%AppData%\ddcbright\perf.log`: every flyout open (and its theme/content/show/layout phases) is logged, while DDC/CI `get_monitors`/`get_brightness`/`set_brightness` and the scheduler tick are only logged when they take over 200ms (marked `SLOW`).
 - **Performance data** (`DdcBrightEventSource.cs`) — an ETW provider named `DdcBright`, with Start/Stop events around the hot paths that matter most for a DDC/CI app: the hardware brightness get/set calls, the schedule-fade tick, and ambient-light luma computation. Near-zero cost when nothing's listening; capture it with:
   ```powershell
   dotnet-trace collect --process-id <pid> --providers DdcBright
