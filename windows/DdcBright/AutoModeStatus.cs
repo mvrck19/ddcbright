@@ -17,8 +17,8 @@ internal static class AutoModeStatus
                   $"and to {settings.DayBrightness}% over {settings.TransitionMinutes} min starting at {Format(settings.DayTime)}."
                 : $"Dims to {settings.NightBrightness}% at {Format(settings.NightTime)}, brightens to {settings.DayBrightness}% at {Format(settings.DayTime)}.",
             AutoBrightnessMode.Ambient =>
-                $"Samples your webcam every {AmbientLightSensor.SampleIntervalSeconds} seconds to estimate room brightness. " +
-                $"Never dims below {AmbientLightSensor.MinBrightness}%.",
+                $"Samples your webcam every {AmbientLightSensor.SampleIntervalSeconds} seconds to match the room's light. " +
+                "Adjust brightness to teach it what you prefer.",
             _ => string.Empty,
         };
     }

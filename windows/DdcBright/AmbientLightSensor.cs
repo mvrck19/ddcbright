@@ -16,6 +16,9 @@ namespace DdcBright;
 /// </summary>
 public record AmbientCaptureResult(bool Success, int? Luma, int? Brightness, string Message);
 
+/// <summary>One learned correction: "at this room light, I want this brightness".</summary>
+public record AmbientCalibrationPoint(int Luma, int Brightness);
+
 /// <summary>
 /// Estimates ambient light from a brief, single webcam frame -- not a live
 /// preview -- grabbed periodically while Ambient mode is active, matching
@@ -25,7 +28,8 @@ public record AmbientCaptureResult(bool Success, int? Luma, int? Brightness, str
 public class AmbientLightSensor
 {
     internal const int SampleIntervalSeconds = 30;
-    internal const int MinBrightness = 10; // never auto-dim to fully black
+    internal const int MinBrightness = 10; // uncalibrated floor; a learned correction can go down to 0
+    private const int SameLightLevelLuma = 10; // a new correction this close to an old one replaces it
     private const int ChangeThreshold = 5; // ignore small fluctuations
     private const double SmoothingAlpha = 0.3; // EMA weight for each new sample
     private const long MaxLogBytes = 512 * 1024;
@@ -86,7 +90,7 @@ public class AmbientLightSensor
             // noisy frame -- the dead-band below then avoids redundant DDC
             // writes once the smoothed value has settled.
             _smoothedLuma = _smoothedLuma is { } prev ? prev * (1 - SmoothingAlpha) + luma * SmoothingAlpha : luma;
-            var brightness = MapLumaToBrightness((int)Math.Round(_smoothedLuma.Value));
+            var brightness = MapLumaToBrightness((int)Math.Round(_smoothedLuma.Value), _settings.AmbientCalibration);
 
             if (_lastAppliedBrightness >= 0 && Math.Abs(brightness - _lastAppliedBrightness) < ChangeThreshold)
             {
@@ -248,10 +252,59 @@ public class AmbientLightSensor
         }
     }
 
-    internal static int MapLumaToBrightness(int luma)
+    /// <summary>
+    /// A manual brightness change while Ambient is on: remember it against
+    /// the current room light instead of switching Ambient off. Returns
+    /// false (learns nothing) if there's no camera reading yet. Caller saves.
+    /// </summary>
+    // ponytail: no lock -- the tray-scroll flush and the tick both run on
+    // the thread pool, but each only swaps whole immutable-ish values, and a
+    // lost race just costs one correction. Lock if corrections go missing.
+    public bool Calibrate(int brightness)
+    {
+        if (_smoothedLuma is not { } luma) return false;
+        _settings.AmbientCalibration = AddCalibrationPoint(_settings.AmbientCalibration, (int)Math.Round(luma), brightness);
+        _lastAppliedBrightness = brightness; // already applied by the caller -- don't re-apply on the next tick
+        return true;
+    }
+
+    /// <summary>
+    /// Adds a correction, dropping older ones it overrides: any at nearly
+    /// the same light level, and any that contradict it (a darker room
+    /// wanting a brighter screen, or vice versa) -- so the newest correction
+    /// always wins and the curve keeps rising with room light.
+    /// </summary>
+    internal static List<AmbientCalibrationPoint> AddCalibrationPoint(IReadOnlyList<AmbientCalibrationPoint> points, int luma, int brightness) =>
+        [.. points
+            .Where(p => Math.Abs(p.Luma - luma) >= SameLightLevelLuma
+                && !(p.Luma < luma && p.Brightness > brightness)
+                && !(p.Luma > luma && p.Brightness < brightness))
+            .Append(new AmbientCalibrationPoint(luma, brightness))
+            .OrderBy(p => p.Luma)];
+
+    /// <summary>
+    /// With no corrections: a straight line from MinBrightness (dark) to
+    /// 100% (bright). With corrections: straight lines between them, and
+    /// beyond the darkest/brightest one the default line's slope, shifted to
+    /// pass through it. Expects <paramref name="calibration"/> sorted by
+    /// luma, which AddCalibrationPoint guarantees.
+    /// </summary>
+    internal static int MapLumaToBrightness(int luma, IReadOnlyList<AmbientCalibrationPoint>? calibration = null)
     {
         var percent = MinBrightness + (int)(luma / 255.0 * (100 - MinBrightness));
-        return Math.Clamp(percent, MinBrightness, 100);
+        if (calibration is not { Count: > 0 } points)
+            return Math.Clamp(percent, MinBrightness, 100);
+
+        var first = points[0];
+        var last = points[^1];
+        if (luma <= first.Luma)
+            return Math.Clamp(first.Brightness + percent - MapLumaToBrightness(first.Luma), 0, 100);
+        if (luma >= last.Luma)
+            return Math.Clamp(last.Brightness + percent - MapLumaToBrightness(last.Luma), 0, 100);
+
+        var upper = points.First(p => p.Luma > luma);
+        var lower = points.Last(p => p.Luma <= luma);
+        return (int)Math.Round(lower.Brightness + (upper.Brightness - lower.Brightness) * (luma - lower.Luma) / (double)(upper.Luma - lower.Luma));
     }
 
     [ComImport]

@@ -99,6 +99,16 @@
                                        VerticalAlignment="Center" Margin="0,0,12,0" />
                             <Button Grid.Column="1" x:Name="AmbientTestButton" Content="Test now" Click="AmbientTestButton_Click" VerticalAlignment="Center" />
                         </Grid>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="AmbientCalibrationText" Grid.Column="0" FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button Grid.Column="1" x:Name="AmbientResetButton" Content="Reset" Click="AmbientResetButton_Click" VerticalAlignment="Center" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 

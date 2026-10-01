@@ -254,7 +254,7 @@ public partial class FlyoutWindow : FluentWindow
             var value = (int)e.NewValue;
             percentLabel.Text = $"{value}%";
             var app = (App)System.Windows.Application.Current;
-            app.ExitAutoModeIfActive();
+            app.OnManualBrightnessChange(value);
             app.UpdateTrayTooltip(value);
             RefreshAutoModeUi();
 

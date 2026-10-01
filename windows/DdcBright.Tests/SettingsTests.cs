@@ -20,6 +20,7 @@ public class SettingsTests
                 DayBrightness = 90,
                 NightBrightness = 15,
                 AmbientCameraId = "cam-123",
+                AmbientCalibration = [new(12, 0), new(60, 50)],
                 SyncMonitors = true,
                 ScheduleTransition = ScheduleTransitionMode.Gradual,
                 TransitionMinutes = 45,
@@ -36,6 +37,7 @@ public class SettingsTests
             Assert.Equal(original.DayBrightness, loaded.DayBrightness);
             Assert.Equal(original.NightBrightness, loaded.NightBrightness);
             Assert.Equal(original.AmbientCameraId, loaded.AmbientCameraId);
+            Assert.Equal(original.AmbientCalibration, loaded.AmbientCalibration);
             Assert.Equal(original.SyncMonitors, loaded.SyncMonitors);
             Assert.Equal(original.ScheduleTransition, loaded.ScheduleTransition);
             Assert.Equal(original.TransitionMinutes, loaded.TransitionMinutes);
