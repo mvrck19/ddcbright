@@ -99,7 +99,8 @@ internal sealed class TrayIconScrollHook : IDisposable
             _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _proc, IntPtr.Zero, 0);
             installed.Set();
             Application.Run(); // ponytail: never exits -- background thread, dies with the process
-        }) { IsBackground = true, Name = "TrayIconScrollHook" }.Start();
+        })
+        { IsBackground = true, Name = "TrayIconScrollHook" }.Start();
         installed.Wait();
     }
 
