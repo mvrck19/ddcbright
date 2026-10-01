@@ -53,6 +53,12 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        if (e.Args.Contains("--test-hook-stall"))
+        {
+            TestHookStall();
+            return;
+        }
+
         // `ddcbright.exe --ui-test-settings` opens the Settings window on a
         // throwaway in-memory Settings object (never touches settings.json)
         // and keeps running -- for the DdcBright.UiTests project (FlaUI) to
@@ -165,8 +171,8 @@ public partial class App : System.Windows.Application
         // notches race the hardware and stomp on each other.
         // Skip installing the hook entirely while a debugger is attached.
         // Windows serializes global mouse input through WH_MOUSE_LL hooks:
-        // if the owning thread (this one) stops responding -- suspended at
-        // a breakpoint, or torn down mid-restart during an edit/rebuild/
+        // if the owning thread stops responding -- suspended at
+        // a breakpoint (which pauses every thread, the hook's own included), or torn down mid-restart during an edit/rebuild/
         // relaunch cycle -- system-wide mouse input can stall until this
         // hook responds or Windows' hook-timeout kicks in
         // (HKCU\Control Panel\Desktop\LowLevelHooksTimeout). Scroll-to-
@@ -174,7 +180,9 @@ public partial class App : System.Windows.Application
         // development.
         if (!System.Diagnostics.Debugger.IsAttached)
         {
-            _trayScrollHook = new TrayIconScrollHook(_trayIcon, direction =>
+            // BeginInvoke, not Invoke: the hook runs on its own thread and
+            // must return immediately even while the UI thread is busy.
+            _trayScrollHook = new TrayIconScrollHook(_trayIcon, direction => Dispatcher.BeginInvoke(() =>
             {
                 if (_trayBrightnessEstimate is not { } current) return; // startup read hasn't landed yet
                 var target = Math.Clamp(current + direction * TrayScrollStepPercent, 0, 100);
@@ -185,7 +193,7 @@ public partial class App : System.Windows.Application
                     ExitAutoModeIfActive();
                     SetAllMonitorsBrightness(target);
                 });
-            });
+            }));
         }
 
         // Seed the estimate once, off the UI thread, so the very first
@@ -364,6 +372,54 @@ public partial class App : System.Windows.Application
         }
 
         File.WriteAllLines(Path.Combine(Path.GetTempPath(), "ddcbright_flyout_resize_test.txt"), log);
+        Current.Shutdown();
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, UIntPtr dwExtraInfo);
+
+    // Reported repro: the PC "froze" while the flyout was slow to open.
+    // Windows routes every system-wide mouse event through each WH_MOUSE_LL
+    // hook's owning thread and waits for it -- so if that's the UI thread,
+    // any UI stall stalls the mouse for the whole desktop. Checks that the
+    // tray scroll hook keeps answering while the UI thread is busy.
+    private static void TestHookStall()
+    {
+        var log = new List<string>();
+        try
+        {
+            using var icon = new System.Windows.Forms.NotifyIcon();
+            using var hook = new TrayIconScrollHook(icon, _ => { });
+
+            // Nudge the cursor and time how long until it actually moves --
+            // Windows only moves it once every LL hook has let the event
+            // through, so this is exactly the freeze that was reported.
+            var start = System.Windows.Forms.Cursor.Position;
+            var stopwatch = Stopwatch.StartNew();
+            long latency = -1;
+            // From another thread: when the hook's own thread injects input,
+            // Windows services the hook right there inside mouse_event.
+            new Thread(() => mouse_event(0x0001 /* MOUSEEVENTF_MOVE */, 10, 0, 0, UIntPtr.Zero)).Start();
+            // Busy-wait, not Sleep/Wait: an STA wait can pump messages and
+            // service the hook, which a genuinely stuck UI thread wouldn't.
+            while (stopwatch.ElapsedMilliseconds < 1500)
+            {
+                if (latency < 0 && System.Windows.Forms.Cursor.Position != start) latency = stopwatch.ElapsedMilliseconds;
+                Thread.SpinWait(1000);
+            }
+            System.Windows.Forms.Cursor.Position = start;
+
+            log.Add($"Cursor moved {latency}ms after the mouse event (-1 = not within the 1500ms block) while the UI thread was blocked for 1500ms");
+            log.Add(latency is >= 0 and < 100
+                ? "RESULT: PASS (mouse input not held up by a busy UI thread)"
+                : "RESULT: FAIL (a busy UI thread stalls system-wide mouse input)");
+        }
+        catch (Exception ex)
+        {
+            log.Add($"RESULT: FAIL - {ex}");
+        }
+
+        File.WriteAllLines(Path.Combine(Path.GetTempPath(), "ddcbright_hook_stall_test.txt"), log);
         Current.Shutdown();
     }
 
